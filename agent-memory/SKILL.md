@@ -7,7 +7,7 @@ description: "Use this skill when the user asks to save, remember, recall, or or
 
 A persistent memory space for storing knowledge that survives across conversations.
 
-**Location (project root):** `.agents/skills/agent-memory/memories/`
+**Location:** `memories/` next to `SKILL.md`. Commands below assume the working directory is this skill folder; if the skill is installed elsewhere, prefix paths (e.g. `.agents/skills/agent-memory/memories/`).
 
 ## Proactive Usage
 
@@ -88,19 +88,19 @@ Use summary-first approach to efficiently find relevant memories:
 
 ```bash
 # 1. List categories
-ls .agents/skills/agent-memory/memories/
+ls memories/
 
 # 2. View all summaries
-rg "^summary:" .agents/skills/agent-memory/memories/ --no-ignore --hidden
+rg "^summary:" memories/ --no-ignore --hidden
 
 # 3. Search summaries for keyword
-rg "^summary:.*keyword" .agents/skills/agent-memory/memories/ --no-ignore --hidden -i
+rg "^summary:.*keyword" memories/ --no-ignore --hidden -i
 
 # 4. Search by tag
-rg "^tags:.*keyword" .agents/skills/agent-memory/memories/ --no-ignore --hidden -i
+rg "^tags:.*keyword" memories/ --no-ignore --hidden -i
 
 # 5. Full-text search (when summary search isn't enough)
-rg "keyword" .agents/skills/agent-memory/memories/ --no-ignore --hidden -i
+rg "keyword" memories/ --no-ignore --hidden -i
 
 # 6. Read specific memory file if relevant
 ```
@@ -116,9 +116,9 @@ rg "keyword" .agents/skills/agent-memory/memories/ --no-ignore --hidden -i
 3. Write file with required frontmatter (use `date +%Y-%m-%d` for current date)
 
 ```bash
-mkdir -p .agents/skills/agent-memory/memories/category-name/
+mkdir -p memories/category-name/
 # Note: Check if file exists before writing to avoid accidental overwrites
-cat > .agents/skills/agent-memory/memories/category-name/filename.md << 'EOF'
+cat > memories/category-name/filename.md << 'EOF'
 ---
 summary: "Brief description of this memory"
 created: 2025-01-15
@@ -136,9 +136,9 @@ EOF
 - **Delete**: Remove memories that are no longer relevant
 
   ```bash
-  trash .agents/skills/agent-memory/memories/category-name/filename.md
+  trash memories/category-name/filename.md
   # Remove empty category folders
-  rmdir .agents/skills/agent-memory/memories/category-name/ 2>/dev/null || true
+  rmdir memories/category-name/ 2>/dev/null || true
   ```
 
 - **Consolidate**: Merge related memories when they grow
