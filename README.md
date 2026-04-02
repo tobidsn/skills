@@ -1,8 +1,10 @@
 # tobidsn/skills
 
-A collection of Claude Code skills for Laravel development following **Antikode Architecture** — minimalist, type-safe, and explicit PHP.
+A collection of Claude Code skills for Laravel development following **Antikode Architecture**, plus tools for autonomous ML research and skill management.
 
 ## Skills
+
+### Laravel / Antikode
 
 | Skill | Description |
 |-------|-------------|
@@ -12,6 +14,17 @@ A collection of Claude Code skills for Laravel development following **Antikode 
 | `ant-laravel-design-patern` | Design patterns: Strategy, Factory, Builder, Observer, Actions, Events |
 | `ant-dedoc-scramble` | OpenAPI 3.1 documentation via Laravel Scramble |
 | `ant-important-code` | Antikode discipline: minimal code, no unsolicited implementation |
+
+### ML Research
+
+| Skill | Description |
+|-------|-------------|
+| `autoresearch` | Autonomous LLM training experiments with [karpathy/autoresearch](https://github.com/karpathy/autoresearch) — modify `train.py`, iterate on `val_bpb`, run overnight |
+
+### Utilities
+
+| Skill | Description |
+|-------|-------------|
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `agent-memory` | Persistent cross-conversation memory storage |
 | `find-skills` | Discover and install skills from the public ecosystem |
@@ -35,6 +48,7 @@ npx skills add tobidsn/skills@ant-laravel-eloquent
 npx skills add tobidsn/skills@ant-laravel-design-patern
 npx skills add tobidsn/skills@ant-dedoc-scramble
 npx skills add tobidsn/skills@ant-important-code
+npx skills add tobidsn/skills@autoresearch
 ```
 
 ### Install globally (recommended)

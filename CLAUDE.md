@@ -28,6 +28,7 @@ Each skill is a directory containing:
 | `ant-dedoc-scramble` | OpenAPI 3.1 docs via Laravel Scramble |
 | `ant-important-code` | Antikode discipline enforcer: minimal code, no unsolicited implementation |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
+| `autoresearch` | Autonomous LLM training experiments with karpathy/autoresearch: setup, experiment loop, train.py modifications, val_bpb metric, program.md guidance |
 | `agent-memory` | Persistent cross-conversation memory storage |
 | `find-skills` | Discover and install skills from the public ecosystem |
 
