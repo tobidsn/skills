@@ -3,7 +3,6 @@ name: ant-laravel-specialist
 description: Orchestrates Laravel work in this repo by delegating to ant-* skills (ant-laravel-api, ant-laravel-eloquent, ant-laravel-design-patern, ant-important-code, ant-dedoc-scramble) and supplying shared references and templates. Use when you need a coordinator that picks the right ant- skill—or when the task is broad Laravel (models, Sanctum, queues, Livewire, testing) and does not map to a single ant- skill alone.
 license: MIT
 metadata:
-  author: https://github.com/Jeffallan
   version: "1.3.0"
   domain: backend
   triggers: Laravel, Eloquent, PHP framework, Laravel API, Artisan, Blade templates, Laravel queues, Livewire, Laravel testing, Sanctum, Horizon, Antikode, ant- skills
