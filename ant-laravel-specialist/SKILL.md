@@ -1,9 +1,9 @@
 ---
 name: ant-laravel-specialist
-description: Orchestrates Laravel work in this repo by delegating to ant-* skills (ant-laravel-api, ant-laravel-eloquent, ant-laravel-design-patern, ant-important-code, ant-dedoc-scramble) and supplying shared references and templates. Use when you need a coordinator that picks the right ant- skill—or when the task is broad Laravel (models, Sanctum, queues, Livewire, testing) and does not map to a single ant- skill alone.
+description: Laravel specialist orchestrator. Use for any Laravel task — it picks the right ant-* skill automatically. Triggers on: build feature, create API, refactor, fix query, add job/queue, write Livewire component, add tests, general Laravel/PHP work.
 license: MIT
 metadata:
-  version: "1.3.0"
+  version: "1.4.0"
   domain: backend
   triggers: Laravel, Eloquent, PHP framework, Laravel API, Artisan, Blade templates, Laravel queues, Livewire, Laravel testing, Sanctum, Horizon, Antikode, ant- skills
   role: orchestrator
@@ -32,11 +32,10 @@ When several areas apply, read the relevant ant- skills in parallel or sequence,
 
 ## Core Workflow
 
-1. **Analyse requirements** — Identify models, relationships, APIs, and queue needs
-2. **Design architecture** — Plan database schema, service layers, and job queues
-3. **Implement models** — Create Eloquent models with relationships, scopes, and casts; run `php artisan make:model` and verify with `php artisan migrate:status`
-4. **Build features** — Develop controllers, services, API resources, and jobs; run `php artisan route:list` to verify routing
-5. **Test thoroughly** — Write feature and unit tests; run `php artisan test` before considering any step complete (target >85% coverage)
+1. Identify which `ant-*` skill owns the task (use the Orchestration table above)
+2. Load that skill and follow its rules — do not duplicate its patterns here
+3. For cross-cutting work: schema → models → services/actions → API layer → tests
+4. Run `php artisan migrate:status`, `route:list --path=api`, and `test --coverage` before marking done
 
 ## Reference Guide
 
@@ -48,16 +47,12 @@ When several areas apply, read the relevant ant- skills in parallel or sequence,
 | Livewire | `references/livewire.md` |
 | Factories, fakes, Pest syntax, CLI | `references/testing.md` (API assertions → `ant-laravel-api` + `api-testing.mdc`) |
 
-## Constraints
+## Rules
 
-### MUST DO
-- Use PHP 8.2+ with explicit types; follow PSR-12 (Pint)
-- Apply Eloquent and API rules from the matching ant- skill when touching those layers
-- Queue long-running work; write tests (see `references/testing.md` and project API test rules)
-
-### MUST NOT DO
-- Duplicate patterns that belong in `ant-laravel-api` or `ant-laravel-eloquent`
-- Mix heavy business logic in controllers; skip validation; ignore failed jobs
+- PHP 8.2+, explicit types, PSR-12 (Pint)
+- Delegate to the matching `ant-*` skill — never re-implement its patterns here
+- No business logic in controllers; no skipped validation; no ignored failed jobs
+- Queue long-running work; always write tests (`>85%` coverage)
 
 ## Code Templates
 
@@ -149,6 +144,3 @@ Run these at each workflow stage to confirm correctness before proceeding:
 | After implementation | `php artisan test --coverage` | >85% coverage, 0 failures |
 | Before PR | `./vendor/bin/pint --test` | PSR-12 linting passes |
 
-## Knowledge Reference
-
-Queues, Horizon, Livewire, Pest/PHPUnit, factories/fakes, Redis, broadcasting, notifications, scheduling—plus whatever the delegated `ant-*` skills cover for Eloquent and HTTP APIs.
