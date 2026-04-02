@@ -7,7 +7,9 @@ description: "Use this skill when the user asks to save, remember, recall, or or
 
 A persistent memory space for storing knowledge that survives across conversations.
 
-**Location:** `memories/` next to `SKILL.md`. Commands below assume the working directory is this skill folder; if the skill is installed elsewhere, prefix paths (e.g. `.agents/skills/agent-memory/memories/`).
+**Location (project root):** `.agents/skills/agent-memory/memories/`
+
+Each **category** folder (e.g. `memories/promo/`) holds narrative notes (`*.md`) and an optional **`references/`** subtree: **point-in-time copies** of repo files, created with the shell (see **Reference file copies**). Prefer `cp` into `references/` over pasting huge files into markdown.
 
 ## Proactive Usage
 
@@ -46,13 +48,20 @@ Example:
 memories/
 ├── file-processing/
 │   └── large-file-memory-issue.md
-├── dependencies/
-│   └── iconv-esm-problem.md
+├── promo/
+│   ├── api-promo.md
+│   ├── cms-promo.md
+│   └── references/
+│       └── app/
+│           └── Http/
+│               └── Controllers/
+│                   └── Api/
+│                       └── PromoController.php
 └── project-context/
     └── december-2025-work.md
 ```
 
-This is just an example. Structure freely based on actual content.
+Under `references/`, **mirror the repository-relative path** of each copied file so sources stay unambiguous. Structure freely based on actual content.
 
 ## Frontmatter
 
@@ -78,9 +87,13 @@ created: 2025-01-15
 updated: 2025-01-20
 status: in-progress  # in-progress | resolved | blocked | abandoned
 tags: [performance, worker, memory-leak]
-related: [src/core/file/fileProcessor.ts]
+related:
+  - src/core/file/fileProcessor.ts
+  - src/core/file/workerPool.ts
 ---
 ```
+
+List every repository path you rely on under `related` when the memory is code-backed. Prefer repo-relative paths from the project root (e.g. `app/Services/FooService.php`).
 
 ## Search Workflow
 
@@ -88,21 +101,24 @@ Use summary-first approach to efficiently find relevant memories:
 
 ```bash
 # 1. List categories
-ls memories/
+ls .agents/skills/agent-memory/memories/
 
 # 2. View all summaries
-rg "^summary:" memories/ --no-ignore --hidden
+rg "^summary:" .agents/skills/agent-memory/memories/ --no-ignore --hidden
 
 # 3. Search summaries for keyword
-rg "^summary:.*keyword" memories/ --no-ignore --hidden -i
+rg "^summary:.*keyword" .agents/skills/agent-memory/memories/ --no-ignore --hidden -i
 
 # 4. Search by tag
-rg "^tags:.*keyword" memories/ --no-ignore --hidden -i
+rg "^tags:.*keyword" .agents/skills/agent-memory/memories/ --no-ignore --hidden -i
 
 # 5. Full-text search (when summary search isn't enough)
-rg "keyword" memories/ --no-ignore --hidden -i
+rg "keyword" .agents/skills/agent-memory/memories/ --no-ignore --hidden -i
 
-# 6. Read specific memory file if relevant
+# 6. Search copied reference sources
+rg "keyword" .agents/skills/agent-memory/memories/*/references/ --no-ignore --hidden -i
+
+# 7. Read specific memory file or reference copy if relevant
 ```
 
 **Note:** Memory files are gitignored, so use `--no-ignore` and `--hidden` flags with ripgrep.
@@ -116,9 +132,10 @@ rg "keyword" memories/ --no-ignore --hidden -i
 3. Write file with required frontmatter (use `date +%Y-%m-%d` for current date)
 
 ```bash
-mkdir -p memories/category-name/
+mkdir -p .agents/skills/agent-memory/memories/category-name/
+mkdir -p .agents/skills/agent-memory/memories/category-name/references/
 # Note: Check if file exists before writing to avoid accidental overwrites
-cat > memories/category-name/filename.md << 'EOF'
+cat > .agents/skills/agent-memory/memories/category-name/filename.md << 'EOF'
 ---
 summary: "Brief description of this memory"
 created: 2025-01-15
@@ -133,12 +150,12 @@ EOF
 ### Maintain
 
 - **Update**: When information changes, update the content and add `updated` field to frontmatter
-- **Delete**: Remove memories that are no longer relevant
+- **Delete**: Remove memories that are no longer relevant (including `references/` when removing a whole topic)
 
   ```bash
-  trash memories/category-name/filename.md
-  # Remove empty category folders
-  rmdir memories/category-name/ 2>/dev/null || true
+  trash .agents/skills/agent-memory/memories/category-name/filename.md
+  rm -rf .agents/skills/agent-memory/memories/category-name/references
+  rmdir .agents/skills/agent-memory/memories/category-name/ 2>/dev/null || true
   ```
 
 - **Consolidate**: Merge related memories when they grow
@@ -151,6 +168,7 @@ EOF
 3. **Keep summaries decisive**: Reading the summary should tell you if you need the details
 4. **Stay current**: Update or delete outdated information
 5. **Be practical**: Save what's actually useful, not everything
+6. **Backup values, not only paths**: For code-backed memories, keep **working copies** under `memories/{category}/references/` using **CLI** (`cp` or `rsync`), mirroring repo-relative paths. The `.md` note should index paths and, if useful, the capture date—not giant inlined sources. See **Reference file copies** below.
 
 ## Content Reference
 
@@ -162,3 +180,38 @@ When writing detailed memories, consider including:
 - **Next steps**: What to do next, open questions
 
 Not all memories need all sections - use what's relevant.
+
+## Reference file copies (preferred backup)
+
+For features, APIs, or CMS flows tied to specific implementation files:
+
+1. **Directory:** `.agents/skills/agent-memory/memories/{category}/references/` (create with `mkdir -p`).
+2. **Mirror paths**: Under `references/`, recreate the path from the project root, then copy the file. Example for category `promo`:
+
+```bash
+DEST=".agents/skills/agent-memory/memories/promo/references"
+mkdir -p "$DEST/app/Http/Controllers/Api"
+cp app/Http/Controllers/Api/PromoController.php "$DEST/app/Http/Controllers/Api/"
+```
+
+Repeat for each file (routes, controllers, services, models, resources, etc.).
+
+3. **Markdown note**: In the category’s `.md` file, add a **Referenced files** table: canonical repo path → `references/...` mirror path, plus optional **captured** date (`YYYY-MM-DD`). Do not duplicate full file bodies in markdown unless the snippet is tiny (a few lines).
+4. **Refresh**: When source changes, re-run `cp` (or `rsync`) to refresh copies; bump `updated` in frontmatter or note the capture date in the table.
+5. **Scope**: Copy only files that define behavior for that topic. Avoid copying unrelated trees.
+
+**Fallback**: If copying is impossible, a fenced **Snapshot** block in markdown is acceptable for small files only.
+
+Example table inside a memory:
+
+```markdown
+## Referenced files
+
+| Role        | Canonical path                                      | Copy under references                          |
+|-------------|-----------------------------------------------------|------------------------------------------------|
+| Routes      | `routes/api.php`                                    | `references/routes/api.php`                    |
+| Controller  | `app/Http/Controllers/Api/PromoController.php`      | `references/app/Http/Controllers/Api/PromoController.php` |
+
+Captured: 2026-04-02
+```
+

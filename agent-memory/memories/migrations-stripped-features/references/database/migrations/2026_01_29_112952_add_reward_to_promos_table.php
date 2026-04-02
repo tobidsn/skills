@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('promos', function (Blueprint $table) {
+            $table->unsignedBigInteger('reward_id')->nullable()->after('points');
+            $table->boolean('is_reward')->default(false)->after('reward_id');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('promos', function (Blueprint $table) {
+            $table->dropColumn('reward_id');
+            $table->dropColumn('is_reward');
+        });
+    }
+};
