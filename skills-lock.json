@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "gitlab-cli-skills": {
+      "source": "vince-winkintel/gitlab-cli-skills",
+      "sourceType": "github",
+      "computedHash": "319e071e17731adbcbe756fc2d39440c7f37761fe5b774a7f7282e8a3b0ee18e"
+    }
+  }
+}
