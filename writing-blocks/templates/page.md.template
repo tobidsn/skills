@@ -1,0 +1,10 @@
+# PAGE: {{page_slug}}
+
+source:
+  figma_file: {{figma_file}}
+  figma_node: "{{figma_node}}"
+
+route: /
+
+blocks:
+{{blocks_list}}

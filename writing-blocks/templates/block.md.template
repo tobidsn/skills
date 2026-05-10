@@ -1,0 +1,28 @@
+# BLOCK: {{slug}}
+
+source:
+  figma_file: {{figma_file}}
+  figma_node: "{{figma_node}}"
+
+dimensions:
+  width: {{width}}
+  height: {{height}}
+
+layout:
+  mode: {{layout_mode}}
+{{#if-direction}}  direction: {{direction}}
+{{/if-direction}}{{#if-align}}  align: {{align}}
+{{/if-align}}{{#if-gap}}  gap: {{gap}}
+{{/if-gap}}{{#if-padding}}  padding: { top: {{padding_top}}, right: {{padding_right}}, bottom: {{padding_bottom}}, left: {{padding_left}} }
+{{/if-padding}}{{#if-background}}  background: {{background}}
+{{/if-background}}
+
+{{#if-tokens}}tokens:
+{{tokens_list}}
+
+{{/if-tokens}}{{#if-content}}content:
+{{content_list}}
+
+{{/if-content}}{{#if-components}}components:
+{{components_list}}
+{{/if-components}}
