@@ -1,6 +1,6 @@
 # tobidsn/skills
 
-A collection of Claude Code skills for Laravel development following **Antikode Architecture**, plus tools for autonomous ML research and skill management.
+A collection of Claude Code skills for Laravel development following **Antikode Architecture**, plus tools for autonomous ML research, knowledge mapping, and skill management.
 
 ## Skills
 
@@ -21,6 +21,12 @@ A collection of Claude Code skills for Laravel development following **Antikode 
 |-------|-------------|
 | `autoresearch` | Autonomous LLM training experiments with [karpathy/autoresearch](https://github.com/karpathy/autoresearch) — modify `train.py`, iterate on `val_bpb`, run overnight |
 
+### Knowledge & Visualization
+
+| Skill | Description |
+|-------|-------------|
+| `mindmap-architect` | Convert prompts, YouTube transcripts, files, Lark Docs, or images into interactive SVG mindmaps. Single vault at `~/Mindmaps/` with a shared viewer and thin per-mindmap stubs |
+
 ### Utilities
 
 | Skill | Description |
@@ -39,6 +45,14 @@ Skills are installed via the **Skills CLI** — a package manager for Claude Cod
 npx skills add tobidsn/skills@ant-laravel-api
 ```
 
+### Install `mindmap-architect`
+
+```bash
+npx skills add tobidsn/skills@mindmap-architect -g
+```
+
+After install, run the skill from any project — outputs land in `~/Mindmaps/` (override with `MINDMAP_VAULT`). Open `~/Mindmaps/index.html` directly, or run `python ~/Mindmaps/serve.py` for the live catalog.
+
 ### Install all skills at once
 
 ```bash
@@ -49,6 +63,7 @@ npx skills add tobidsn/skills@ant-laravel-design-patern
 npx skills add tobidsn/skills@ant-dedoc-scramble
 npx skills add tobidsn/skills@ant-important-code
 npx skills add tobidsn/skills@autoresearch
+npx skills add tobidsn/skills@mindmap-architect
 ```
 
 ### Install globally (recommended)
@@ -84,6 +99,7 @@ Once installed, skills activate automatically when you work on relevant tasks in
 - Asking Claude to build a REST endpoint → `ant-laravel-api` activates
 - Asking about an N+1 query issue → `ant-laravel-eloquent` activates
 - Asking to document an API → `ant-dedoc-scramble` activates
+- Asking to "mindmap this YouTube video" or "make a mindmap of these notes" → `mindmap-architect` activates
 
 The `ant-laravel-specialist` orchestrator skill will route your request to the right focused skill based on context.
 
