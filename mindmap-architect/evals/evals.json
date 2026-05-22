@@ -1,0 +1,50 @@
+{
+  "skill_name": "mindmap-architect",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a mindmap about the key architecture patterns of Laravel applications, including thin controllers, service container DI, form requests, repository pattern, and API resources.",
+      "expected_output": "A folder .mindmap/laravel-architecture-patterns/ with mindmap.json, mindmap.md, and index.html visualizer, correctly categorizing thin controllers, DI, form requests, etc.",
+      "expectations": [
+        "The output directory contains index.html",
+        "The output directory contains mindmap.json",
+        "The output directory contains mindmap.md",
+        "The mindmap JSON includes service container DI",
+        "The mindmap JSON includes thin controllers",
+        "The mindmap JSON includes form requests",
+        "The mindmap JSON includes repository pattern",
+        "The mindmap JSON includes api resources",
+        "The output directory contains export.png"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Here is a transcripts/captions text from a YouTube video about agentic workflow: 'Hey guys, today we are talking about AI agents. First, we need to design planning tools, like ReAct or Plan-and-Solve. Then we need tools, like web search, database connections, and custom code tools. Finally, memory is key: short term memory via prompt context, and long term memory via vector databases. Wrap them all in a workflow orchestrator.' Generate a mindmap for this agentic workflow summary.",
+      "expected_output": "A folder .mindmap/ai-agents-workflow/ with mindmap.json, mindmap.md, and index.html visualizer, with branches for planning, tools, memory, and orchestrator.",
+      "expectations": [
+        "The output directory contains index.html",
+        "The output directory contains mindmap.json",
+        "The output directory contains mindmap.md",
+        "The mindmap JSON includes planning",
+        "The mindmap JSON includes tools",
+        "The mindmap JSON includes memory",
+        "The mindmap JSON includes orchestrator",
+        "The output directory contains export.png"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Can you refine this messy outline into a clean mindmap: 'Software deployment process: first step is Server Init, we need to configure security group ports, update apt-get, install git, docker, and node. Second step is Build & Deploy, where we clone git repo, copy env, run npm install, run build, start systemd process. Third step is Health Check, curl the api/health endpoint, send Slack notification.'",
+      "expected_output": "A folder .mindmap/software-deployment-process/ with structured mindmap files outlining Server Init, Build & Deploy, and Health Check.",
+      "expectations": [
+        "The output directory contains index.html",
+        "The output directory contains mindmap.json",
+        "The output directory contains mindmap.md",
+        "The mindmap JSON includes server init",
+        "The mindmap JSON includes build & deploy",
+        "The mindmap JSON includes health check",
+        "The output directory contains export.png"
+      ]
+    }
+  ]
+}
