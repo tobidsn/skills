@@ -21,6 +21,16 @@ A collection of Claude Code skills for Laravel development following **Antikode 
 |-------|-------------|
 | `autoresearch` | Autonomous LLM training experiments with [karpathy/autoresearch](https://github.com/karpathy/autoresearch) — modify `train.py`, iterate on `val_bpb`, run overnight |
 
+### Agentic Workflow
+
+Domain-agnostic, spec-driven skills that take a task from idea → plan → build → verify with minimal hand-holding. They read the project's `AGENTS.md` / `CLAUDE.md` for stack and verification conventions instead of hardcoding any, so they port to any project.
+
+| Skill | Description |
+|-------|-------------|
+| `workflow` | Orchestrator for one unit of work — drives `spec → plan → build → verify → done`. Delegates spec-writing to `creator-spec` and plan-writing to `creator-plan`. Dispatched via `/workflow <slug> <prompt>` |
+| `creator-spec` | Writes the contract (`docs/spec/<slug>.md`) — Problem/Why, Scope, Requirements, Acceptance Criteria. Mandatory for new features, opt-in for fix/improve |
+| `creator-plan` | Writes the implementation plan (`docs/plan/<slug>.md`) — Context, Goals, Notes, Done-when, Implementation. Derives from the spec when one exists |
+
 ### Knowledge & Visualization
 
 | Skill | Description |
@@ -64,6 +74,9 @@ npx skills add tobidsn/skills@ant-dedoc-scramble
 npx skills add tobidsn/skills@ant-important-code
 npx skills add tobidsn/skills@autoresearch
 npx skills add tobidsn/skills@mindmap-architect
+npx skills add tobidsn/skills@workflow
+npx skills add tobidsn/skills@creator-spec
+npx skills add tobidsn/skills@creator-plan
 ```
 
 ### Install globally (recommended)
