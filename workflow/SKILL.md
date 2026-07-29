@@ -42,9 +42,45 @@ Detect intent from the prompt. If ambiguous, ask `Intent? (fix/new/improve)`. Th
 | `idle`   | no spec and no plan for the slug                                | `/workflow <slug> <prompt>` to start     |
 | `spec`   | `docs/spec/<slug>.md` exists, no plan yet (`new`, or opted-in)  | `/workflow plan`                         |
 | `plan`   | `docs/plan/<slug>.md` exists, no source changed for the task    | `/workflow build`                        |
-| `build`  | source files changed for this task                              | `/workflow verify`                       |
+| `build`  | source files changed for this task (see **Git** below)          | `/workflow verify`                       |
 | `verify` | build done, checks not yet confirmed                            | run the checks, then `/workflow done`    |
 | `done`   | verify passed                                                   | `/workflow done` to close out            |
+
+## Git
+
+Everything here is conditional on `git rev-parse --is-inside-work-tree` succeeding. **If it fails, the project isn't a git repo — skip this whole section and never run `git init`.**
+
+### Branch per task
+
+At start, if the repo is clean and HEAD is on the project's default branch, create a branch for the task and switch to it. Pick the name in this order:
+
+1. A branch convention named in AGENTS.md/CLAUDE.md — always wins.
+2. Otherwise the shape already in use: `git branch --sort=-committerdate --format='%(refname:short)' | head -20`.
+3. Otherwise map the intent: `fix` → `fix/<slug>`, `new` → `feat/<slug>`, `improve` → `refactor/<slug>`.
+
+Report the branch you created. If HEAD is **already** on a non-default branch, stay on it and say so — the user may have prepared it deliberately.
+
+**If the working tree is dirty, stop and ask before creating or switching branches.** Uncommitted work belongs to the user; don't stash, reset, checkout over it, or "clean up" first.
+
+### Changed-files signal
+
+Phase `build` is detected from git, not from memory of what you edited. Task files = tracked changes minus the workflow's own artifacts:
+
+```bash
+DEFAULT=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo main)
+BASE=$(git merge-base HEAD "$DEFAULT")
+{ git diff --name-only; git diff --cached --name-only; \
+  git log --name-only --pretty=format: "$BASE"..HEAD; } \
+  | sort -u | grep -Ev '^(docs/(spec|plan)/|$)'
+```
+
+Non-empty → the task has reached `build`. Empty while a plan exists → still `plan`. Use the same list for the `done` summary of what changed.
+
+### Commit
+
+Committing happens **only** at `/workflow done`, and **only** after the user says yes to that specific commit. Match the repo's existing message style — read `git log --oneline -20` first; don't impose Conventional Commits on a repo that doesn't use it. Stage the source changes and the spec/plan together: the artifacts are part of the work.
+
+**Push and PRs are never part of `done`.** Do them only when the user asks for them in their own words, in that turn.
 
 ## Sub-command dispatch
 
@@ -59,10 +95,11 @@ Parse the first token after `/workflow`: a bare word that isn't a known sub-comm
 1. **Validate.** `<slug>` required (kebab-case; reject spaces/uppercase). `<prompt>` is everything after — one sentence of intent. If missing, ask for it.
 2. **Read AGENTS.md/CLAUDE.md** to learn the stack and how this project builds/tests/verifies.
 3. **Detect intent** (table above), or honor an explicit `<intent>:<slug>`.
-4. **Branch on intent:**
+4. **Create the task branch** per **Git → Branch per task** (skipped if not a repo; stop and ask if the tree is dirty).
+5. **Branch on intent:**
    - **`new` → spec-first.** Invoke `creator-spec` with the slug as title and the prompt as detail → `docs/spec/<slug>.md` (`creator-spec` stamps `started`). Phase `spec`. Next: `/workflow plan`.
    - **`fix` / `improve` → spec skipped.** Invoke `creator-plan` with the slug as title and the prompt as detail → `docs/plan/<slug>.md` (it stamps `started`). Phase `plan`. Next: `/workflow build`. (Add a spec later with `/workflow spec <slug>` if it turns out to need one.)
-5. **Report:** intent, artifact path, phase, next command. Point at the path; don't paste the file into chat.
+6. **Report:** intent, branch, artifact path, phase, next command. Point at the path; don't paste the file into chat.
 
 ---
 
@@ -121,13 +158,14 @@ Print exactly:
 phase:   <phase>
 slug:    <slug-or-"n/a">
 intent:  <fix|new|improve|"n/a">
+branch:  <current-branch + " (N files changed)", or "n/a">
 spec:    <docs/spec/...-or-"none">
 plan:    <docs/plan/...-or-"none">
 elapsed: <now − started as "Xh Ym", or "n/a">
 next:    <suggested-next-command>
 ```
 
-`elapsed` reads `started` from the spec if one exists, otherwise from the plan. Terse — this is the "where am I" command.
+`elapsed` reads `started` from the spec if one exists, otherwise from the plan. `branch` is `n/a` outside a git repo; `N` is the count from **Git → Changed-files signal**. Terse — this is the "where am I" command.
 
 ---
 
@@ -148,8 +186,8 @@ next:    <suggested-next-command>
    ```
 
    In that file's `## Manhours` block set `completed:` to `$NOW_HUMAN  (epoch $NOW_EPOCH)` and `total:` to the `Xh Ym` result. (Epoch is UTC-based, so the diff is correct regardless of timezone.)
-3. **Summarize** what changed (the source files touched) and report the total.
-4. If the project uses git, you **may** stage and commit — **ask the user first**; never auto-commit, push, or open a PR.
+3. **Summarize** what changed — the file list from **Git → Changed-files signal** — and report the total.
+4. **Offer the commit** (git repos only). Show the branch, the files to be staged, and the proposed message written in the repo's existing style, then ask. Commit only on an explicit yes; if the answer is no or ambiguous, leave the tree as-is and say the work is uncommitted. Never push and never open a PR here — those need their own ask.
 
 Phase returns to `idle`.
 
@@ -174,5 +212,8 @@ Phase returns to `idle`.
 - **Don't let the plan contradict the spec.** The spec is the contract — if building proves it wrong, update the spec first, then re-plan.
 - **Don't mark `done` while any Acceptance Criterion fails.** Verify is the test step.
 - **Don't auto-commit, push, or open PRs.** Ask before any git action.
+- **Don't touch uncommitted work you didn't create.** No stash, reset, or checkout over a dirty tree — stop and ask.
+- **Don't `git init`.** No repo means the Git section doesn't apply, not that you should create one.
+- **Don't guess a commit style.** Read `git log --oneline -20` and match it.
 - **Don't paste the spec or plan into chat.** Point at the file path.
 - **Don't introduce tools or structure the project doesn't already use.** Follow existing patterns.
