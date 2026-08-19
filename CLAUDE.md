@@ -29,6 +29,7 @@ Each skill is a directory containing:
 | `ant-dedoc-scramble` | OpenAPI 3.1 docs via Laravel Scramble |
 | `ant-important-code` | Antikode discipline enforcer: minimal code, no unsolicited implementation |
 | `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports `gh` (GitHub) and `glab` (GitLab) |
+| `call-graph` | Verified plain-text call graphs for flow/trace/"what calls X" questions — language-agnostic, every node carries `path:line` evidence |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `autoresearch` | Autonomous LLM training experiments with karpathy/autoresearch: setup, experiment loop, train.py modifications, val_bpb metric, program.md guidance |
 | `agent-memory` | Persistent cross-conversation memory storage |

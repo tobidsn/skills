@@ -1,0 +1,23 @@
+{
+  "skill_name": "call-graph",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "alur login di app ini gimana sih? dari request masuk sampai token kesimpen. jelasin dong",
+      "expected_output": "Leads with a plain-text call graph in a `ts` fence rooted at the HTTP route (POST /api/login, not the controller), two-space-indented `→` children, followed by a `src:` block giving path:line for every unique node. Middleware/validation appear as nodes. Async or queued steps are marked [async]. No Mermaid. Three to five notes covering only what the tree can't show (conditions, error paths, gotchas). No Tests section unless the test wiring genuinely differs in shape.",
+      "files": ["fixtures/ts-express-app/"]
+    },
+    {
+      "id": 2,
+      "prompt": "/call-graph what calls UserRepository::findByEmail? aku mau tau semua yang manggil ini sebelum aku ubah signature-nya",
+      "expected_output": "Inverted caller graph with `←` arrows and findByEmail as root, enumerating every caller found (including non-HTTP entry points like CLI commands and queue jobs, not just controllers), each traced up to its own entry point. `src:` block points at definitions. Callers found only by name-grep are confirmed by reading the call site; anything unresolvable is marked [unverified] with a reason rather than silently dropped or invented.",
+      "files": ["fixtures/php-laravel-app/"]
+    },
+    {
+      "id": 3,
+      "prompt": "port berapa sih service ini jalan di local?",
+      "expected_output": "Answers the single fact directly with the port and its source (path:line), and does NOT produce a call graph — this is exactly the trivial single-fact case the skill says to skip. Correct behavior here is restraint; drawing a tree would be a failure.",
+      "files": ["fixtures/ts-express-app/"]
+    }
+  ]
+}
