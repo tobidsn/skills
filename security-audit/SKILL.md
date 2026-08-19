@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Lightweight security audit, then optionally a fix plan and the fixes. Runs the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and greps the high-signal classes: SQL injection, command injection, XSS, path traversal, weak crypto, TLS/header gaps, missing rate limits, race conditions. Use whenever someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, or review a diff for security problems — and when they want those findings turned into a plan at `docs/security-audit/` or actually fixed. Has an auto mode ("audit auto", "audit dan langsung bikin plan", "audit and plan the fixes") that writes the plan without stopping to ask. Phase one is one ranked table with openable `path:line` and never an edit; code changes always wait for explicit approval.
+description: Lightweight security audit, then optionally a fix plan and the fixes. Runs the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and greps the high-signal classes: SQL injection, command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled public writes, unbounded OTP or 2FA verify attempts, race conditions. Use whenever someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or work out rate limits, OTP protections, or bot filtering for an endpoint — and when they want those findings turned into a plan under `docs/security-audit/` or actually fixed. An auto mode ("audit auto", "audit and plan the fixes") writes the plan without stopping to ask. Phase one is one ranked table with openable `path:line` and never an edit; code changes always wait for explicit approval.
 ---
 
 # security-audit
@@ -14,8 +14,8 @@ Three phases: **audit** → **plan** → **build**. Phase one is a table and not
 **Auto** — audit and write the plan in one pass, no question in between, then stop at the build gate. Enter auto when the request already reaches past the table:
 
 - `/security-audit auto`, `audit auto`, `--auto`
-- "audit dan langsung bikin plan", "audit lalu buatkan plan-nya", "audit + plan"
-- "audit this and give me a remediation plan", "audit and plan the fixes"
+- "audit this and give me a remediation plan", "audit and plan the fixes", "audit + plan"
+- "audit this and write up what needs fixing", "review security and draft the fix plan"
 
 The point of auto isn't speed, it's not asking a question the human already answered. If someone asked for a plan in their opening message, stopping to ask whether they want a plan is noise — read the intent and go.
 
@@ -23,7 +23,7 @@ The point of auto isn't speed, it's not asking a question the human already answ
 
 **What auto never skips:**
 
-- **The build gate.** Auto stops after writing the plan, every time. A plan is a Markdown file you can delete; the fixes are code changes that break callers, lock users out, and encode product decisions. A real audit of a real service turned up a fix that would have locked out every existing user and another that would have silently killed a cron job — neither is a call to make while nobody is looking. Only an explicit, separate "kerjakan planya" / "apply the fixes" opens phase 3.
+- **The build gate.** Auto stops after writing the plan, every time. A plan is a Markdown file you can delete; the fixes are code changes that break callers, lock users out, and encode product decisions. A real audit of a real service turned up a fix that would have locked out every existing user and another that would have silently killed a cron job — neither is a call to make while nobody is looking. Only an explicit, separate "apply the fixes" / "work the plan" opens phase 3.
 - **No CRIT or HIGH means no plan.** Auto still checks this first. A plan for three LOW findings is a backlog; say the table is the whole answer and stop. Auto is permission to skip a question, not a reason to manufacture work.
 - **Tracing before reporting.** Auto does not license a faster, shallower audit. Same verification, same `path:line` on every row, same `Not scanned:` honesty.
 
@@ -165,7 +165,9 @@ This generalizes past hashing: a name that matches the GOOD column is a reason t
 
 After the table, ask once — a real question with options, not a rhetorical one. Nothing is written until the answer comes back:
 
-> Lanjut bikin plan perbaikan untuk yang CRIT/HIGH, atau cukup tabelnya?
+> Want a fix plan for the CRIT/HIGH findings, or is the table enough?
+
+Ask it in whatever language the conversation is already in — this is shown to a human, not matched against a pattern.
 
 Offer three: **write the plan**, **fix now without a plan** (they accept the fixes as listed), **just the table**. If there are no CRIT or HIGH rows, don't ask at all — say the table is the whole answer and stop. A plan for three LOW findings is a backlog, not a plan.
 
