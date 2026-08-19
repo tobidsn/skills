@@ -39,6 +39,14 @@ Read `AGENTS.md` or `CLAUDE.md` — repo root first, then the nearest one to the
 
 <the verdict line, and the `Not scanned:` line if there was one>
 
+## Scan provenance                     ← only when a dependency scan actually ran
+
+- `<the exact command, with the pinned tool version>` — <YYYY-MM-DD>
+  - <toolchain/runtime version it scanned against, and what CI pins if they differ>
+  - <counts: reachable / imported-unreachable / module-level>
+  - advisories behind the table rows: <IDs, comma-separated>
+  - full tool output not stored — rerun the command above to reproduce
+
 ## Context
 
 - @path/to/file — what it is and its current vulnerable state, one line each
@@ -74,6 +82,12 @@ Keep the section order, and keep `## Implementation` as written — the comment 
 ## Section guide
 
 **Findings** — the audit table verbatim, *all* severities including the MED/LOW that aren't Goals. This is the plan's evidence base and it replaces the `> Spec:` link a feature plan would carry: the audit was a chat message, so if the plan doesn't embed it, every Goal becomes an unsourced claim a week later. Never trim it to just the Goals.
+
+**Scan provenance** — present only when a dependency scan ran; omit it entirely for a code-only audit. It exists because dependency findings are the one class that cannot verify itself. A code finding carries `path:line`: open the file and the evidence is right there, today and in six months. "Package X@1.2.3 has advisory Y" is only true against one lockfile state and one snapshot of the advisory database — bump a dependency or wait a week and the numbers move, with no way to reconstruct what was originally seen. So write down the command, the version it scanned against, the date, the counts, and the advisory IDs behind the rows that made the table.
+
+Record the IDs by reading them out of the tool's own output, never from memory. And keep it to those five lines: **do not paste the raw output.** A `govulncheck ./...` run emits an example call trace per vulnerability and will out-length the entire plan, burying the part a human has to read — and stale raw output is the most convincing wrong thing a plan can contain. A separate `scan.txt` companion file is worse than either: it is a second artifact carrying findings out of the session, needing the same redaction discipline as the plan, and it lists advisories per package in more detail than the plan does. More leak surface, for evidence almost nobody opens.
+
+The payoff is that `Done when` can then say "no *new* findings versus the ones recorded above" and have that mean something. Without this block, that phrasing points at a baseline the document does not contain, which is an acceptance criterion nobody can check.
 
 **Context** — one line per file the fixes touch, naming its current *vulnerable* state, not just its purpose. `@pkg/middleware/jwt.go — issues and validates JWTs; falls back to a hardcoded secret when config is empty` tells the executor why it's here. Every `@path` must already exist; files you plan to create belong in Goals.
 
