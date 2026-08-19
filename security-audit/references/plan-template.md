@@ -41,10 +41,14 @@ Read `AGENTS.md` or `CLAUDE.md` — repo root first, then the nearest one to the
 
 ## Scan provenance                     ← only when a dependency scan actually ran
 
-- `<the exact command, with the pinned tool version>` — <YYYY-MM-DD>
-  - <toolchain/runtime version it scanned against, and what CI pins if they differ>
-  - <counts: reachable / imported-unreachable / module-level>
-  - advisories behind the table rows: <IDs, comma-separated>
+One entry per ecosystem scanned. The last line lists whatever unit that ecosystem's
+tool actually resolves — see the section guide.
+
+- `<exact command, tool version>` — <YYYY-MM-DD>
+  - <runtime/toolchain it scanned against, and what CI pins if they differ>
+  - <counts, broken down by severity or reachability as the tool reports them>
+  - <"no reachability analysis" when the tool only matches versions>
+  - <the actionable unit: advisory IDs where reachability was proven, packages otherwise>
 
 ## Context
 
@@ -84,7 +88,23 @@ Keep the section order, and keep `## Implementation` as written — the comment 
 
 **Scan provenance** — present only when a dependency scan ran; omit it entirely for a code-only audit. It exists because dependency findings are the one class that cannot verify itself. A code finding carries `path:line`: open the file and the evidence is right there, today and in six months. "Package X@1.2.3 has advisory Y" is only true against one lockfile state and one snapshot of the advisory database — bump a dependency or wait a week and the numbers move, with no way to reconstruct what was originally seen. So write down the command, the version it scanned against, the date, the counts, and the advisory IDs behind the rows that made the table.
 
-Record the IDs by reading them out of the tool's own output, never from memory. Keep it to those four lines and resist padding them: a note saying the raw output was not stored, or telling the reader to rerun the command, earns nothing — the command is already on the first line, and the absence of a 200-line dump is not something anyone needs told. That kind of meta-commentary about the document is exactly what this skill refuses everywhere else.
+**List the unit you act on, which differs by tool.** `govulncheck` traces call paths, so its advisory IDs are already filtered down to what your code reaches — listing them is a meaningful baseline. `composer audit` and `npm audit` do neither: they match installed versions against a database and report everything, with no idea whether the vulnerable function is ever called. There, the unit you act on is the **package** — you bump a package, never an advisory — so list packages with their worst severity and advisory count, and say plainly that no reachability analysis was performed. Listing 45 composer advisory IDs is a wall of text that also claims a precision the tool never offered; ten package names with counts is shorter and truer.
+
+Two real shapes, from real runs:
+
+```md
+- `go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...` — 2026-05-04
+  - scanned against go1.25.5; CI pins 1.26.6, and go.mod sets no toolchain floor
+  - 25 stdlib reachable / 6 imported but unreachable / 3 module-level only
+  - reachable advisories: <every GO-… id the run printed, comma-separated>
+
+- `composer audit --locked --no-dev` — 2026-05-04 (Composer 2.10.2)
+  - 45 advisories across 17 packages: 1 critical, 13 high, 27 medium, 3 low, 1 unrated
+  - no reachability analysis — composer matches versions, it does not trace call paths
+  - critical/high packages: acme/parser (1 crit), vendor/http-client (9), vendor/markdown (8), …
+```
+
+Record every number and name by reading the tool's own output, never from memory. Keep it to those four lines per ecosystem and resist padding them: a note saying the raw output was not stored, or telling the reader to rerun the command, earns nothing — the command is already on the first line, and the absence of a 200-line dump is not something anyone needs told. That kind of meta-commentary about the document is exactly what this skill refuses everywhere else.
 
 **Do not paste the raw output.** A `govulncheck ./...` run emits an example call trace per vulnerability and will out-length the entire plan, burying the part a human has to read — and stale raw output is the most convincing wrong thing a plan can contain. A separate `scan.txt` companion file is worse than either: it is a second artifact carrying findings out of the session, needing the same redaction discipline as the plan, and it lists advisories per package in more detail than the plan does. More leak surface, for evidence almost nobody opens.
 
