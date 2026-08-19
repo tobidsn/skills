@@ -142,7 +142,7 @@ php artisan route:list --method=POST --json     # Laravel: check the middleware 
 grep -rEn "\.(post|put|patch|delete)\(" src/    # Express/Nest: compare against limiter mounts
 ```
 
-When either throttling row fires, or the endpoint is public and costs money per request (SMS, email, a paid API), read `references/rate-limits.md` for the numbers, the four OTP controls, and the reCAPTCHA v3 checks. Don't invent limits from memory — an OTP cap guessed wrong is either someone's SMS bill or a locked-out user base.
+When either throttling row fires, or the endpoint is public and costs money per request (SMS, email, a paid API), read `references/rate-limits.md`: the recommended limits and how to key them, the four controls an OTP flow needs, and how to pick a bot filter by client type — Turnstile for web, attestation for mobile apps. Don't invent limits from memory, and don't name a bot filter before you know whether the client is a browser or an app: an OTP cap guessed wrong is either someone's SMS bill or a locked-out user base, and "add reCAPTCHA" to a mobile-only API is the wrong fix at the wrong layer.
 
 ### Open the wrapper: a correct primitive name is not a correct configuration
 

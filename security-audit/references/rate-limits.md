@@ -111,7 +111,27 @@ The audit check is the **default value in the second argument**. `config('servic
 
 **A rate limit and a bot filter solve different problems, and neither substitutes for the other.** A limiter caps volume per key; ten thousand IPs sending one request each pass every limiter you have. A solved CAPTCHA, meanwhile, still allows unlimited volume if nothing is counting. Public endpoints that cost money per request — OTP send, contact forms that email staff, signup — want both.
 
+### Pick by client type first, then by cost
+
+| Client | Recommend | Cost |
+|---|---|---|
+| **Web** | **Cloudflare Turnstile** — the default | Free, and it stays free as traffic grows |
+| **Mobile app** | Play Integrity (Android) / App Attest (iOS), or Firebase App Check wrapping both | Free; Play Integrity is quota-limited per app, and raising the quota is still free |
+| Web, already on GCP and under the free tier | reCAPTCHA is fine | Free tier, then billed per assessment |
+
+**Turnstile is the default for web** for three reasons that compound: it is free with no volume cliff, it ships no personal data to a third party (so it needs no data-processing agreement), and it usually resolves invisibly with no puzzle. Reach for reCAPTCHA when the project already has it wired, when the client is standardised on Google Cloud, or when you specifically want reCAPTCHA's fraud-prevention products.
+
+**Cost is often what decides this, not the security properties**, so know the shape:
+
+- **reCAPTCHA** used to be free to roughly a million assessments a month. Google moved it under Google Cloud with tiers and a much smaller free allowance, billed per thousand assessments beyond it — and the deeper fraud-prevention features cost several times the base rate. On a high-volume public endpoint this becomes a real line item.
+- **Firebase App Check itself is free**, including enforcement on Firestore, Storage, and Functions. The catch is the provider behind it: mobile attestation is free, but **App Check for web uses reCAPTCHA Enterprise and inherits its pricing.** So "App Check is free" is true for a mobile client and not automatically true for a web one.
+- **Turnstile** has no paid tier to plan around.
+
+Do not quote exact figures from this file into a client estimate. The tier structures have been reorganised more than once; check the current Google Cloud and Firebase pricing pages when the number matters.
+
 ### reCAPTCHA v3, done properly
+
+Most projects that already use a bot filter use this one, so the checks below matter even when Turnstile would have been the better choice. Turnstile's verification flow is the same shape — POST the token to its siteverify endpoint, fail closed — it just returns a pass/fail rather than a score, so points 2 and 3 collapse into point 1.
 
 v3 returns a **score from 0.0 to 1.0, not a pass or fail.** You choose a threshold and you choose the action. Four things must be checked server-side, and an integration that only runs the client-side script is theatre — the token means nothing until `siteverify` has seen it:
 
@@ -140,10 +160,11 @@ Give the HTTP client a timeout (10s is plenty) so a slow siteverify cannot hang 
 - **Enabled-if-configured.** `Enabled = Secret != ""` is convenient for local dev and fail-open in production: forget the secret in the deploy environment and the endpoint quietly accepts anything. Verify the secret is actually set wherever it matters, or make a missing secret fatal at boot in production.
 - **A bypass token.** `RECAPTCHA_BYPASS_TOKEN` that skips verification is useful in tests and a backdoor if it reaches production with a value. Confirm it is empty in the production environment, and treat a committed default as a finding.
 
-### Alternatives worth naming
+### Mobile clients: attestation, not CAPTCHA
 
-- **Cloudflare Turnstile** — drop-in replacement, no puzzle, and it does not ship personal data to Google. Prefer it when privacy or a data-processing agreement is in scope.
-- **Mobile clients: use attestation, not CAPTCHA.** An API consumed by an app should verify **Play Integrity** (Android) or **App Attest** (iOS), or Firebase App Check which wraps both. CAPTCHA in a native app is a bad experience and easily stripped; attestation proves the request came from your real app binary. A well-built OTP flow puts app-check middleware on send *and* verify, alongside the four limits above.
+An API consumed by an app should verify **Play Integrity** (Android) or **App Attest** (iOS), or **Firebase App Check** which wraps both. A CAPTCHA in a native app is a poor experience and easily stripped from the client; attestation proves the request came from your real app binary, which is a stronger claim than "a human was probably here". A well-built OTP flow puts app-check middleware on **both** send and verify, alongside the four limits above — verify is the endpoint under brute-force pressure, so protecting only send misses the point.
+
+When you recommend a bot filter, say which client you mean. "Add reCAPTCHA" on a mobile-only API is the wrong fix at the wrong layer, and it will cost money to do the wrong thing.
 
 ## Reporting these
 
