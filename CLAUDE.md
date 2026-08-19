@@ -30,6 +30,7 @@ Each skill is a directory containing:
 | `ant-important-code` | Antikode discipline enforcer: minimal code, no unsolicited implementation |
 | `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports `gh` (GitHub) and `glab` (GitLab) |
 | `call-graph` | Verified plain-text graphs for flow/trace/"what calls X"/overview questions — every node carries `path:line` evidence. Four materials: code (language-agnostic), interface flows, orchestration, process |
+| `promo-card` | Landscape PNG announcement cards for a skill/feature/release — self-contained HTML rendered to an exact pixel size via headless Chrome, with DOM verification before the screenshot |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `autoresearch` | Autonomous LLM training experiments with karpathy/autoresearch: setup, experiment loop, train.py modifications, val_bpb metric, program.md guidance |
 | `agent-memory` | Persistent cross-conversation memory storage |

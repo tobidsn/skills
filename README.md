@@ -43,6 +43,7 @@ Domain-agnostic, spec-driven skills that take a task from idea → plan → buil
 |-------|-------------|
 | `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports GitHub (`gh`) and GitLab (`glab`). `list` open issues or deep-review one into a triage verdict |
 | `call-graph` | Answer flow questions with a verified plain-text graph — root → what it reaches, every node backed by an openable `path:line`. Language-agnostic code tracing, plus interface flows, agent orchestration, and pipeline/approval processes |
+| `promo-card` | Landscape PNG announcement card for a skill, feature, or release — self-contained HTML rendered to an exact pixel size through headless Chrome, verified in the DOM before the screenshot is taken |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `agent-memory` | Persistent cross-conversation memory storage |
 | `find-skills` | Discover and install skills from the public ecosystem |
@@ -81,6 +82,7 @@ npx skills add tobidsn/skills@creator-spec
 npx skills add tobidsn/skills@creator-plan
 npx skills add tobidsn/skills@project-issue
 npx skills add tobidsn/skills@call-graph
+npx skills add tobidsn/skills@promo-card
 ```
 
 ### Install globally (recommended)

@@ -1,0 +1,23 @@
+{
+  "skill_name": "promo-card",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "buatkan promo image buat skill call-graph, landscape, buat dibagi ke tim internal. isinya cara pakai dan cara install",
+      "expected_output": "Reads the real facts first — version and tags from the catalog or SKILL.md frontmatter, the exact install command — rather than inventing them. Builds a self-contained HTML card with a fixed 1600x900 `.stage` carrying `box-sizing: border-box`, serves it over 127.0.0.1 (never `file:`, which Playwright blocks) with a charset=utf-8 handler so arrows and em-dashes don't become mojibake, sets the reflow breakpoint below 1600px so the poster layout actually applies, then runs the DOM assertions (exact size, no horizontal scroll, nothing clipped, columns bottom-aligned) BEFORE screenshotting. Reads the resulting PNG back to look at it. Moves the PNG out of the git repo and removes the `.playwright-mcp/` directory, leaving `git status` clean. Sample output on the card is labelled `example output` because it isn't a verified trace.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "render this html to a png at exactly 1200x1200 please",
+      "expected_output": "Treats this as the core pipeline without the card-design work — the user already has HTML. Serves over localhost with the utf-8 handler, sets the viewport to 1200x1200, verifies the stage measures exactly 1200x1200 (catching `content-box` padding inflation) and that nothing is clipped or overflowing, then screenshots and moves the file out of the repo. Does not silently deliver a differently-sized image; if the content doesn't fit, says so and offers to cut content or reduce type size rather than growing the canvas past the requested size.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "bikin bar chart buat traffic bulanan kita, jadiin png",
+      "expected_output": "Recognizes this is a data visualization, not an announcement card — promo-card explicitly does not cover charts. Hands off to the dataviz skill for the chart itself, and only contributes the HTML-to-PNG render step if a PNG is still wanted. Does not reach for the card template, which has no chart affordances.",
+      "files": []
+    }
+  ]
+}
