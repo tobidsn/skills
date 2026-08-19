@@ -14,8 +14,6 @@ Get the date from the machine, don't guess it:
 
 ```bash
 date '+%Y-%m-%d'
-date '+%Y-%m-%d %H:%M %Z'   # for the Manhours stamp
-date +%s                    # epoch, for the duration sum later
 ```
 
 ## The plan is an exploit map — say so when you hand it over
@@ -34,12 +32,6 @@ Read `AGENTS.md` or `CLAUDE.md` — repo root first, then the nearest one to the
 
 ```md
 # Security fixes — <audited scope>
-
-## Manhours
-
-- started:   <YYYY-MM-DD HH:MM TZ>  (epoch <seconds>)
-- completed: —
-- total:     —
 
 ## Findings
 
@@ -73,9 +65,11 @@ MED/LOW findings above are out of scope for this plan.
 ## Implementation
 
 <!-- executor's working log — leave empty -->
+
+- task-specific, checkable statements of success — use the project's OWN verification: passing tests, a clean build, a real request/command/job run
 ```
 
-Keep the section order. Keep `## Implementation` empty with its comment — the build phase fills it.
+Keep the section order, and keep `## Implementation` as written — the comment and the guidance bullet both stay in the file you hand over. They are the instruction the build phase reads before it starts logging, so deleting them leaves the executor guessing what a finished entry looks like.
 
 ## Section guide
 
@@ -102,7 +96,7 @@ Keep the section order. Keep `## Implementation` empty with its comment — the 
 
 Prefer that over "the code was changed", which is not verification.
 
-**Manhours** — stamp `started` from the machine at creation and leave `completed`/`total` as `—`. Never overwrite `started` when updating an existing plan.
+**Implementation** — hand it over holding only the comment and the guidance bullet. The build phase replaces the bullet with what it actually did and what actually verified it, one entry per finding, written as the work happens rather than summarised afterwards.
 
 ## Anti-patterns
 
@@ -115,4 +109,4 @@ Prefer that over "the code was changed", which is not verification.
 
 ## Updating an existing plan
 
-If a plan for the same scope already exists, edit it in place rather than adding a second file for the same date: preserve `## Implementation` and the `started` stamp, refresh `## Findings` with the new audit, and mark Goals that are now fixed rather than deleting them — a plan that quietly loses a Goal reads as if the finding never existed.
+If a plan for the same scope already exists, edit it in place rather than adding a second file for the same date: preserve whatever `## Implementation` has accumulated, refresh `## Findings` with the new audit, and mark Goals that are now fixed rather than deleting them — a plan that quietly loses a Goal reads as if the finding never existed.
