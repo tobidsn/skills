@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "cv-builder": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "cv-builder/SKILL.md",
+      "computedHash": "e5de7de7841c4c5d51985f55e56faa7e9df1566bf6288200c1944a56ac017786"
+    },
     "gitlab-cli-skills": {
       "source": "vince-winkintel/gitlab-cli-skills",
       "sourceType": "github",
