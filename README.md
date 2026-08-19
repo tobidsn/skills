@@ -158,7 +158,7 @@ POST /api/v1/campaign/redeem-offers
     ! on throw: deletePendingRedeem, then rethrow → 500
 ```
 
-Every node comes with a `src:` block giving its `path:line`, so any hop can be spot-checked in seconds. Below that, a few notes cover what a tree can't: which failures retry, recover, or are fatal; resources acquired without a guaranteed release; loops that hide N+1s; branches that can no longer run.
+Every node comes with a `src:` block giving its `path:line`, so any hop can be spot-checked in seconds. Per-node facts ride in the tree itself — `?` for how a node fails (retried, recovered, or fatal), `!` for what it needs or must release. The notes below carry only what spans the whole flow: loops that hide N+1s, ordering between sync and deferred work, branches that can no longer run. Trees are capped at ~25 nodes, with anything elided marked `→ … (n more)` rather than silently dropped.
 
 **Four materials.** Code is the default and works on any language. The same notation covers interface flows (surfaces and the moves between them, with empty/loading/partial/error/denied states per surface), agent or task orchestration (waves, gates, data dependencies), and process flows (CI/CD, data pipelines, approval chains). When nothing openable exists yet — a flow you've only described — the graph is labeled `[proposed]` and drops the `src:` block rather than citing sources that don't exist.
 

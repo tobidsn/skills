@@ -43,12 +43,13 @@ src:
   ComponentB → path/to/other.ts:LINE
 ````
 
-Then, below the block, three to five lines of notes covering only what the tree can't express.
+Then, below the block, two to five lines of notes covering only what has no single owning node — per-node facts belong in the tree as `?` / `!` lines.
 
 ## Grammar rules
 
 - **Plain text only. Never Mermaid, never an image.** A plain-text graph survives being pasted into a terminal, a PR review, a commit message, or a Slack thread. That reuse is most of the value.
-- **`ts` fence, always** — including for PHP, Python, Go, Ruby, Java. It is a rendering choice: it gives monospace and keeps the `→` from being mangled. It is not a claim about the source language. Keeping it constant is what makes graphs comparable across repos.
+- **`ts` fence, always** — for TypeScript, PHP, Python, Go, Ruby, Java, and for non-code graphs. It is a rendering choice, not a claim about the source language. Nothing in the tree is valid TypeScript, so the coloring is incidental — but it lands on brackets, braces, and dotted names, which happen to be exactly the distinctions this notation uses (`{store}`, `[condition]`, `Class.method`). Incidental contrast that aligns with the grammar beats a flat `text` block you have to read line by line. The reason it's *fixed* rather than per-language is that constant notation is what makes graphs comparable across repos.
+- **The fence is a bonus, never the foundation.** Terminals and GitHub highlight; Slack and commit messages don't. In half the places these answers get pasted, all the reader has is your indentation and the `→`. Make the tree legible without color, then let color help where it exists.
 - **Two-space indentation per level.** Indentation is the hierarchy; nothing else encodes it.
 - **The root has no arrow.** Every child line starts with `→ ` after its indentation.
 - **Real symbols only.** `AuthController.__invoke`, `UserRepository::findByEmail`, `POST /api/login` — the names as they appear in the source. Never a paraphrase like "the auth layer" or "validation happens here".
@@ -69,12 +70,14 @@ Use these sparingly — they exist so the tree can carry conditionality without 
 | `[proposed]` | The whole graph is a proposal, not a trace — goes in the title | `graph: [proposed] token rotation` |
 | `? ` | A way this node fails or is absent, on its own line under the node | `? error: falls back to cached price` |
 | `! ` | Something the node needs, or must release, on its own line | `! release: lock freed in finally (job.ts:88)` |
+| `… ` | An elided subtree, with how many nodes were cut | `→ … (9 more under Notifier)` |
 
 Rules for markers:
 - **Never invent a line number for a `[new]` node.** It has no line yet. Omit it from `src:` or write `— not yet implemented`.
 - **`[unverified]` is a last resort, not a shortcut.** Prefer opening the file. When you do use it, say in the notes what blocked resolution (dynamic dispatch, generated code, vendor binary).
 - **`[proposed]` replaces the `src:` block, it doesn't decorate it.** A proposal has nothing to cite. Say in one line that the graph reflects described intent rather than verified source.
-- **`?` and `!` lines are indented as children of the node they describe** but take no arrow, so they read as annotations rather than calls. They come into their own for interface and process graphs, where failure states and preconditions *are* the substance of the question — see `non-code-graphs.md`. In code graphs, prefer keeping this in the notes unless a specific node's failure mode is the point of the question.
+- **`?` and `!` lines are indented as children of the node they describe** but take no arrow, so they read as annotations rather than calls. Use them in code graphs too, not just interface and process ones: a break point or an unreleased lock is far more useful pinned to the node that owns it than buried in a note three paragraphs later. The notes are for what has no single owning node — ordering across the whole flow, cardinality, a branch that can no longer run.
+- **An elided subtree still owes the reader a reason.** `→ … (n more)` in the tree, and one line below it saying what's in there and why you cut it. Silent truncation reads as "that's the whole flow", which is the one thing a graph must never imply falsely.
 
 ## The `src:` evidence block
 
@@ -114,11 +117,14 @@ POST /auth/refresh
     → TokenService.refresh
       → TokenService.verifyRefreshToken
         → JwtLive.verify
+        ? error: fatal — fails closed, any verify error becomes Revoked (token.ts:118)
       → [if token revoked] TokenError.Revoked
       → SessionRepo.rotate
+        ! needs: delete + insert in one transaction (session.ts:147)
         → {postgres:sessions}
       → [async] AuditLog.record
         → {queue:audit}
+        ? error: none — fire-and-forget, a queue outage loses records silently
 ```
 
 src:
@@ -133,9 +139,10 @@ src:
 ````
 
 Notes:
-- `verifyRefreshToken` fails closed — any verification error becomes `TokenError.Revoked` and the rotation never runs (`token.ts:118`).
-- `SessionRepo.rotate` deletes and inserts in one transaction, so a crash mid-rotation cannot leave the user with two valid sessions (`session.ts:147`).
-- The audit write is fire-and-forget; a queue outage loses audit records silently.
+- Failing closed collapses two different causes into one outcome: an expired token and a forged one both surface as `Revoked` (`errors.ts:19`), so a client can't tell "re-login" from "retry".
+- The rotation commits before the audit is dispatched, so a missing audit record never implies a missing rotation — the reverse isn't true, which matters if you reconcile the two.
+
+Note how the per-node facts moved into the tree as `?` and `!` lines while the notes kept only what spans the whole flow. A note that restates an arrow is the thing to delete.
 
 ## Worked example — Laravel / PHP
 
@@ -148,13 +155,16 @@ POST /api/posts
   → PostController.__invoke
     → StorePostRequest.validated
     → CreatePostAction.execute
+      ! needs: DB transaction opened here, committed at CreatePostAction.php:44
       → Post::create
         → {mysql:posts}
       → [if has media] AttachMediaAction.execute
         → {s3:uploads}
+        ? error: fatal — S3Exception propagates, transaction rolls back, post is not created
       → [async] PostCreated event
         → InvalidatePostCacheListener.handle
           → {redis:posts.index}
+          ? error: recovered — cache miss on next read, no retry configured
 ```
 
 src:
@@ -170,8 +180,8 @@ src:
 The fence stays `ts` even though every symbol here is PHP — that's the rule working as intended. The fence is presentation; the tree is the contract.
 
 Notes:
-- `PostCreated` is queued (`ShouldQueue`, `PostCreated.php:12`), so cache invalidation lags the response — a client re-reading the index immediately can see stale data.
-- `AttachMediaAction` runs inside the same request; a slow S3 upload blocks the response.
+- Cache invalidation is queued (`ShouldQueue`, `PostCreated.php:12`) while creation is synchronous, so the write and its invalidation are never atomic — a client re-reading the index immediately can see stale data.
+- The media upload sits inside the request *and* inside the transaction, so S3 latency is both response latency and lock duration. That pairing is the finding here; neither half is alarming alone.
 
 ## Worked example — answering "what calls X?"
 

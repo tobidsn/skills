@@ -79,7 +79,12 @@ Start broad with `rg`, confirm structurally, then read the call site. A name mat
 
 ```bash
 # Where is this symbol defined?
-rg -n "(function|def|fn|func|class|const)\s+methodName" --type-add 'src:*.{ts,js,php,py,go,rb,java}' -t src
+# Three alternatives, because one pattern can't cover all three shapes:
+#   keyword form   — function foo, def foo, class Foo, const foo
+#   Go receiver    — func (r *Repo) foo(
+#   class method   — foo(args) {  with no keyword at all (TS/JS/PHP/Java)
+rg -n "(function|def|fn|func|class|const)\s+methodName\b|func\s+\([^)]*\)\s+methodName\b|^\s*(public |private |protected |static |async )*methodName\s*\(" \
+  --type-add 'src:*.{ts,js,php,py,go,rb,java}' -t src
 
 # Who calls it? (candidates — each still needs the call site read)
 rg -n "methodName\s*\(" -g '!*test*' -g '!vendor' -g '!node_modules'
