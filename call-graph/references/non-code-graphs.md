@@ -20,7 +20,7 @@ The columns are aligned by construction. Reading across a row tells you what the
 | What are the edges? | calls, dispatches | moves the person makes | data dependencies | handoffs, triggers |
 | What flows through? | the happy-path value | what is read and done | the work itself | the artifact or request |
 | How can it be absent? | retry, recover, fatal | empty, loading, partial, error, denied | wrong context, missing input, misread intent | timeout, rejection, rollback |
-| What does a node need first? | dependencies injected | data, permission, prior step, viewport | subgraph, method, verification, WHY | approval, artifact, credential |
+| What does a node need first? | dependencies injected | data, permission, prior step, viewport | subgraph, method, WHY | approval, artifact, credential |
 | Where does untrusted input enter? | the transport edge | the field being typed in | the delegation prompt | the intake form or webhook |
 | What wraps without reshaping? | middleware, interceptors | motion, focus, feedback | logging, session tracking | notifications, audit trail |
 | What must be released? | connection, transaction, lock | attention — modals, focus | the worker itself | the lock, the environment |
@@ -96,7 +96,7 @@ graph: [proposed] migrate auth to token rotation — 3 waves, 5 tasks
 Task: rotate refresh tokens without logging anyone out
   wave1 [parallel]
     → T1 add rotation columns to sessions
-      ! needs: migration conventions, verify: php artisan migrate --pretend
+      ! needs: migration conventions
       ! why: rotation cannot be recorded without a place to record it
     → T2 write the rotation policy doc
       ! needs: current token TTLs
@@ -104,14 +104,14 @@ Task: rotate refresh tokens without logging anyone out
   gate: both complete
   wave2
     → T3 implement TokenService.rotate
-      ! needs: T1 schema, T2 policy, verify: php artisan test --filter=Token
+      ! needs: T1 schema, T2 policy
       ? break: misreads intent if "rotate" is left ambiguous — pass the target graph
   gate: T3 green
   wave3
     → T4 swap the HTTP handler to rotation
       ! needs: T3 signature
     → T5 backfill existing sessions
-      ! needs: T3 signature, verify: dry-run on staging replica
+      ! needs: T3 signature
       ? break: unbounded backfill on a large table — require batching in the prompt
 ```
 
@@ -121,12 +121,13 @@ src:
   T3 → docs/plan/token-rotation.md § Wave 2
 ````
 
-Four things every task node should carry, because a worker missing any of them will guess — and guessing is where delegation goes wrong:
+Every task node should carry three things, because a worker missing any of them will guess — and guessing is where delegation goes wrong:
 
 - **the subgraph** — what to build, in the notation its domain uses
 - **the method** — which conventions govern this work
-- **the verification** — the exact command or check that proves it's done
 - **the why** — the reason the node exists, not just the change to make
+
+Verification belongs in the plan document each node cites, not inline on the node. Commands are long, they date faster than the graph does, and repeating one per node turns a readable tree into a shell script nobody can scan. Name the verification once — in the notes, or in the `§` section the `src:` block points at.
 
 Delegation break points are worth marking with `?` because they're coordinator problems, not worker problems: *wrong context* (the worker doesn't know what you know), *missing input* (wave 2 needs wave 1's output and nobody passed it — the edge was invisible), *misread intent* (the worker did the letter, not the intent, because the subgraph was ambiguous).
 

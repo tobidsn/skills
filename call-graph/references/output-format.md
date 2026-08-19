@@ -54,6 +54,7 @@ Then, below the block, two to five lines of notes covering only what has no sing
 - **The root has no arrow.** Every child line starts with `→ ` after its indentation.
 - **Real symbols only.** `AuthController.__invoke`, `UserRepository::findByEmail`, `POST /api/login` — the names as they appear in the source. Never a paraphrase like "the auth layer" or "validation happens here".
 - **One node per call, in call order.** If a method calls three things, they are three siblings at the same indent, in the order they execute.
+- **The line ends at the node name.** No `//` comments, no trailing prose, no parentheticals. Because the fence is `ts`, a `//` tail renders as a syntax-highlighted comment and therefore looks sanctioned — it isn't. A trailing comment is an unverified claim with no `path:line`, and it typically conceals nodes that belong in the tree (`{middleware} …['api']   // throttle, SubstituteBindings` is two missing children, not an annotation). Node facts go on `?` / `!` lines; flow facts go in the notes.
 - **Siblings vs. children.** Same indent = called by the same parent. Deeper indent = called *by the line above it*. Getting this wrong is the most misleading error a graph can contain, because it looks correct.
 
 ## Node markers
@@ -222,3 +223,4 @@ The specific ways these graphs go wrong, worth checking before you send one:
 5. **A proposal presented as a trace.** The graph came from what someone described, not from a source you opened, but it carries a `src:` block anyway. Title it `[proposed]` and drop the citations.
 6. **Scope creep.** The graph kept growing into neighboring subsystems. Answer the question asked; offer the next trace in one line.
 7. **Prose that repeats the tree.** Notes exist for what the tree cannot show. If a note restates an arrow, delete it.
+8. **Detail smuggled in as a trailing `//` comment.** It reads as a legitimate annotation because the `ts` fence colors it like one, but it has no `path:line` and it is usually a collapsed list of nodes that should each have their own line. Expand it into nodes, or demote it to a `?` / `!` line.

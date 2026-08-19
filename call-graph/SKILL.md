@@ -48,6 +48,23 @@ So when someone asks "explain this codebase" or "what does this module do", open
 
 The exception is the skip list above. A graph pasted onto a single-fact question reads as padding, which teaches the reader to stop trusting the format.
 
+## Size the job before you start
+
+Tracing is read-heavy, and reads are the expensive part — not the graph. Match the effort to the question, in one of three sizes:
+
+| Size | When | Budget |
+|------|------|--------|
+| **Small** | One endpoint, one handler, "what does this route do" | 3–6 targeted reads, no reference files, ~8 nodes |
+| **Normal** | A feature across layers, "what calls X" | 8–15 reads, ~15 nodes |
+| **Deep** | Cross-subsystem, an overview of an unfamiliar repo | as needed, capped at ~25 nodes |
+
+Two rules that apply at every size:
+
+- **Read ranges, not files.** `rg -n` to find the line, then read the function body around it. Opening a 900-line controller to confirm one call is most of how a small trace turns into an expensive one. Whole-file reads are for files you'll trace several nodes through.
+- **Skip step 2 when the layering is already obvious.** `AGENTS.md` / `CLAUDE.md` earn their read on an unfamiliar repo or a Deep trace. On a small trace in a codebase whose conventions you've already seen this session, they're overhead.
+
+If a Small question keeps growing as you read, say so and stop — "this touches four subsystems, want the deep version?" beats silently spending ten times the budget.
+
 ## Workflow
 
 **1. Fix the scope before reading anything.**
@@ -57,7 +74,7 @@ Turn the question into a specific start and stop. "How does auth work?" is not a
 `AGENTS.md`, `CLAUDE.md`, `README.md`. They tell you the layering (controller → action → service), the naming conventions, and where the entry points live. A framework's convention beats your prior about how the code is probably organized.
 
 **3. Find the real root.**
-Route table, CLI registration, queue consumer, event listener, cron entry, test file — whatever actually starts the flow. Grep the route definition, don't infer it from a controller name. `references/entry-points.md` has per-framework recipes.
+Route table, CLI registration, queue consumer, event listener, cron entry, test file — whatever actually starts the flow. Grep the route definition, don't infer it from a controller name. If the framework is unfamiliar or the root won't surface, `references/entry-points.md` has per-framework recipes; if you already know where routes live, don't open it.
 
 **4. Walk the edges outward, one hop at a time.**
 At each node, open the file and read the body to find what it reaches next. Resolve indirection instead of stopping at it: an interface call needs the bound implementation (check the DI container / service provider / module registration), a dispatched event needs its listeners, a queued job needs its handler. An unresolved hop is the most common place a graph quietly becomes fiction.
@@ -111,9 +128,7 @@ Never guess a path, a symbol name, a caller, or a line number. If you're tempted
 
 ## Output
 
-Lead with the graph. The full grammar, the `src:` evidence block, markers, and worked examples live in `references/output-format.md` — read it before your first graph in a session.
-
-The shape, in brief:
+Lead with the graph. Everything you need to produce one is here — don't open a reference file just to recall the format.
 
 ````markdown
 graph: <short title of the flow>
@@ -123,15 +138,50 @@ Production:
 EntryPoint
   → ComponentA
     → ComponentA.method
+      ? error: fatal — propagates, flow dies
       → [condition] ComponentB
         → {queue_or_store}
+      → [async] SomeJob
 ```
 
 src:
   EntryPoint → path/to/file.ts:LINE
   ComponentA → path/to/component.ts:LINE
-```
+  ComponentA.method → path/to/component.ts:LINE
 ````
+
+Markers, all of them:
+
+| Marker | Means |
+|--------|-------|
+| `[condition]` | Runs only in a specific case — `[if cache miss]` |
+| `{name}` | A queue, store, cache, or external boundary — `{redis:sessions}` |
+| `[async]` | Dispatched, not awaited — the caller doesn't block |
+| `[unverified]` | A hop you believe exists but couldn't confirm |
+| `[new]` | Doesn't exist yet — never give it a line number |
+| `[proposed]` | In the title: the whole graph is intent, not a trace — drop `src:` entirely |
+| `? ` | How this node fails or is absent — annotation line, no arrow |
+| `! ` | What this node needs, or must release — annotation line, no arrow |
+| `… ` | An elided subtree, with the count — `→ … (9 more)` |
+
+`src:` block: one line per **unique** node, pointing at the **definition** not the call site, paths relative to the repo root, in the same order as the tree.
+
+**Nothing follows the node name on its line — no `//` comments, no trailing prose, no parenthetical asides.** The `ts` fence makes `// like this` render as a real comment, which is exactly why it's tempting and exactly why it has to be banned: it looks deliberate while smuggling in unverified claims that carry no `path:line`. Worse, it usually hides real nodes. This:
+
+```
+→ {middleware} Kernel::$middlewareGroups['api']   // throttle (unlimited), SubstituteBindings
+```
+
+buried two middleware that belong in the tree, and made "unlimited" an assertion nobody can check:
+
+```
+→ {middleware} Kernel::$middlewareGroups['api']
+  → throttle:api
+    ? limit: unlimited — no rate limit configured (Kernel.php:41)
+  → SubstituteBindings
+```
+
+If it's a node, give it a line and a `src:` entry. If it's a fact about a node, make it a `?` or `!` line. If it's about the whole flow, put it in the notes. There is no fourth place.
 
 Core rules: plain text only, never Mermaid — this renders identically in a terminal, a diff, and a commit message, which is where these answers get reused. Two-space indentation carries the hierarchy; the root takes no arrow. The fence is always `ts`, for every language and for non-code graphs — the coloring is incidental but it falls on the brackets, braces, and dotted names this notation is built from, and keeping it constant is what lets graphs from different sources be compared. Colour is a bonus: Slack and commit messages have none, so the tree must read on indentation alone.
 
@@ -145,15 +195,18 @@ If the user wants every future answer in this format, not just this one, merge a
 For flow, path, trace, caller, architecture, and how-it-works questions, lead with
 a plain-text hierarchical call graph in a `ts` fence. Two-space-indented `→`
 children. Show Production always, Tests only when they differ. Include verified
-`path:line` evidence for every node. Cap the tree at ~25 nodes, eliding the rest
-as `→ … (n more)`. Include a graph in project overviews, architecture summaries,
-and code explanations. Skip it for trivial single-fact questions.
+`path:line` evidence for every node. No trailing `//` comments — node facts go on
+`?` / `!` lines. Cap the tree at ~25 nodes, eliding the rest as `→ … (n more)`.
+Include a graph in project overviews, architecture summaries, and code
+explanations. Skip it for trivial single-fact questions.
 ```
 
 Offer this once, when it's relevant. Don't write to their instruction files unprompted.
 
 ## Reference files
 
-- `references/output-format.md` — the full output contract: grammar, markers, evidence block, worked examples. Read before producing a graph.
-- `references/entry-points.md` — locating the real entry point per framework (Express, NestJS, Next.js, Laravel, Rails, FastAPI, Spring, Go, queues, CLIs), and resolving DI, events, and jobs.
-- `references/non-code-graphs.md` — the three non-code materials: interface flows, orchestration/delegation, and process flows. Read when the material isn't code.
+None of these are required reading. The format above is complete; these exist for the cases it doesn't cover. Loading one costs roughly as much as tracing three nodes, so open it only for the reason listed.
+
+- `references/output-format.md` — worked examples (TypeScript, Laravel, inverted caller graphs) and the seven ways these graphs go wrong. Open when a specific case is unclear, not to recall the grammar.
+- `references/entry-points.md` — per-framework recipes for finding the real root, and for resolving DI bindings, events, jobs, and dynamic dispatch. Open when the framework is unfamiliar or a hop won't resolve.
+- `references/non-code-graphs.md` — the three non-code materials: interface flows, orchestration, process flows. Open when the material isn't code.
