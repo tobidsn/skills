@@ -45,7 +45,6 @@ Read `AGENTS.md` or `CLAUDE.md` — repo root first, then the nearest one to the
   - <toolchain/runtime version it scanned against, and what CI pins if they differ>
   - <counts: reachable / imported-unreachable / module-level>
   - advisories behind the table rows: <IDs, comma-separated>
-  - full tool output not stored — rerun the command above to reproduce
 
 ## Context
 
@@ -85,7 +84,9 @@ Keep the section order, and keep `## Implementation` as written — the comment 
 
 **Scan provenance** — present only when a dependency scan ran; omit it entirely for a code-only audit. It exists because dependency findings are the one class that cannot verify itself. A code finding carries `path:line`: open the file and the evidence is right there, today and in six months. "Package X@1.2.3 has advisory Y" is only true against one lockfile state and one snapshot of the advisory database — bump a dependency or wait a week and the numbers move, with no way to reconstruct what was originally seen. So write down the command, the version it scanned against, the date, the counts, and the advisory IDs behind the rows that made the table.
 
-Record the IDs by reading them out of the tool's own output, never from memory. And keep it to those five lines: **do not paste the raw output.** A `govulncheck ./...` run emits an example call trace per vulnerability and will out-length the entire plan, burying the part a human has to read — and stale raw output is the most convincing wrong thing a plan can contain. A separate `scan.txt` companion file is worse than either: it is a second artifact carrying findings out of the session, needing the same redaction discipline as the plan, and it lists advisories per package in more detail than the plan does. More leak surface, for evidence almost nobody opens.
+Record the IDs by reading them out of the tool's own output, never from memory. Keep it to those four lines and resist padding them: a note saying the raw output was not stored, or telling the reader to rerun the command, earns nothing — the command is already on the first line, and the absence of a 200-line dump is not something anyone needs told. That kind of meta-commentary about the document is exactly what this skill refuses everywhere else.
+
+**Do not paste the raw output.** A `govulncheck ./...` run emits an example call trace per vulnerability and will out-length the entire plan, burying the part a human has to read — and stale raw output is the most convincing wrong thing a plan can contain. A separate `scan.txt` companion file is worse than either: it is a second artifact carrying findings out of the session, needing the same redaction discipline as the plan, and it lists advisories per package in more detail than the plan does. More leak surface, for evidence almost nobody opens.
 
 The payoff is that `Done when` can then say "no *new* findings versus the ones recorded above" and have that mean something. Without this block, that phrasing points at a baseline the document does not contain, which is an acceptance criterion nobody can check.
 

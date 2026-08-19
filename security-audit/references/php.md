@@ -95,7 +95,11 @@ Laravel's `Hash::make()` / `Hash::check()` and `Str::random()` are already corre
 'bcrypt' => ['rounds' => env('BCRYPT_ROUNDS', 12)],
 ```
 
+**No `config/hashing.php` is not a finding** — it means the framework default applies, which is safe. Only a file that *lowers* the cost is worth a row.
+
 The same applies to any project or package helper that wraps hashing (`app/Support/Hasher.php`, a vendor `Bcrypt` class): open it and read the parameters, following it into `vendor/` when that's where it lives. A wrapper whose name matches the GOOD pattern still fails if it passes a minimum cost. Report it at the wrapper's own `path:line`, and note in `Fix` when it is upstream and cannot be changed in-repo.
+
+`whereRaw` is the highest-noise signal in this file. `whereRaw('LOWER(title) LIKE ?', [$q])` is *correct* — the placeholder and bindings array are right there. Read the arguments before reporting: the finding is interpolation into the SQL string, not the use of `whereRaw`.
 
 ## TLS verification disabled — MED
 
