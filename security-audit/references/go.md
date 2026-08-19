@@ -82,6 +82,22 @@ subtle.ConstantTimeCompare([]byte(token), []byte(want)) == 1      // crypto/subt
 
 Encryption: AES-GCM (`cipher.NewGCM`), never ECB or bare CBC — unauthenticated modes let an attacker modify ciphertext undetected. Fresh nonce per message from `crypto/rand`, never reused with one key. And never ignore a crypto error (`_, _ = encrypt(data)`) — fail closed.
 
+**The cost parameter is the finding, and it is usually not at the call site.** A helper named `Bcrypt` looks correct from the caller:
+
+```go
+bcryptService := new(supports.Bcrypt)
+hash, _ := bcryptService.HashPassword(pw)          // grep says "bcrypt" — looks fine
+```
+
+…while the helper itself, often in a dependency, is where the work factor lives:
+
+```go
+// $GOMODCACHE/<module>@<version>/supports/bcrypt.go
+bcrypt.GenerateFromPassword(passwordBytes, bcrypt.MinCost)   // MinCost is 4; default is 10
+```
+
+Open the wrapper before you conclude hashing is fine — follow it into the module cache if that's where it is. Below `bcrypt.DefaultCost` (10) is a HIGH finding, reported at the wrapper's own `path:line`. Same for `argon2.IDKey` memory/time/parallelism arguments.
+
 ## TLS verification disabled — MED
 
 ```go

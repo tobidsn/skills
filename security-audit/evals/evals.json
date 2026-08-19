@@ -1,0 +1,27 @@
+{
+  "skill_name": "security-audit",
+  "_note": "Prompts are parameterised on $TARGET_REPO so the eval set can ship publicly. Point it at any Go/Fiber service with a JWT auth flow and an admin log viewer. Expected outputs describe the vulnerability classes rather than the file:line coordinates of a specific unpatched service — a public eval set is not the place to publish an exploit map.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "full-audit-go-repo",
+      "prompt": "audit the security of $TARGET_REPO, it's a fiber api we're about to hand over to the client. tell me if there's anything that blocks the release",
+      "expected_output": "One ranked table, max 10 rows, each row with an openable path:line, plus a single verdict line and a `Not scanned:` line if anything could not be checked. Must surface the two release blockers: a hardcoded signing-secret fallback in the JWT layer (present in both the config default and the Go accessor), and an unauthenticated route group serving a log viewer whose file parameter reaches the filesystem unvalidated. Should load only references/go.md, not php.md or typescript.md. No prose essay, no STRIDE section, no edits to the repo.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "scoped-auth-review",
+      "prompt": "before i ship this, review the auth flow in $TARGET_REPO — the JWT middleware, the basic-auth middleware, and the auth controller. anything dangerous in there?",
+      "expected_output": "Same table contract, scoped to those files plus whatever the trace pulls in. Must catch the hardcoded signing-secret fallback and the raw database error string returned to the client on login. Must also catch the bcrypt work factor: the controller delegates hashing to a helper in a third-party module that passes bcrypt.MinCost (4) instead of DefaultCost (10) — the value lives one level below the call site, so a run that stops at the call site misses it. Should NOT call bcrypt the wrong algorithm, and should NOT flag the constant-time comparison in the basic-auth middleware; both are already correct, and false positives on correct code are a failure mode here.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "deps-only-missing-tool",
+      "prompt": "can you check whether $TARGET_REPO has any vulnerable dependencies? just the dependency side, i already know about the code issues",
+      "expected_output": "Recognises go.sum as the only ecosystem present (no package.json, no composer.json), so govulncheck is the tool. Must reach it via `go run golang.org/x/vuln/cmd/govulncheck@<version>` rather than installing a binary, or report the gap on the `Not scanned:` line — what it must never do is skip the scan silently or claim the dependencies are clean when nothing ran. Must stay on the dependency side and not drift into a full code scan the user explicitly declined. Credit for noticing that govulncheck also covers the standard library at the building toolchain, which no lockfile shows.",
+      "files": []
+    }
+  ]
+}

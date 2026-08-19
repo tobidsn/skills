@@ -1,15 +1,15 @@
 ---
 name: security-audit
-description: Lightweight security audit — run the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and grep the high-signal vulnerability classes: SQL injection, command injection, XSS, path traversal, TLS/header gaps, missing rate limits, race conditions. Use when someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, or review a diff for security problems. Reports one ranked table with `path:line`; it never auto-patches.
+description: Lightweight security audit, then optionally a fix plan and the fixes — human confirms between each phase. Runs the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and greps the high-signal classes: SQL injection, command injection, XSS, path traversal, weak crypto, TLS/header gaps, missing rate limits, race conditions. Use whenever someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, or review a diff for security problems — and when they then want those findings turned into a plan at `docs/security-audit/` or actually fixed. Phase one is one ranked table with openable `path:line` and never an edit.
 ---
 
 # security-audit
 
-Two modes. One table out. Nothing else.
+Three phases, each gated by the human: **audit** → *ask* → **plan** → *ask* → **build**. Phase one is a table and nothing else; the later phases only happen if asked for.
 
-## Output contract
+## Phase 1 output contract
 
-Every run ends with exactly this, and stops:
+The audit ends with exactly this, and stops:
 
 ```
 | Sev | Finding | Location | Fix |
@@ -18,17 +18,19 @@ Every run ends with exactly this, and stops:
 | HIGH | shell interpolation | cmd/deploy/main.go:41 | exec.Command args |
 
 2 critical/high reachable — blocker.
+Not scanned: composer audit unavailable (Composer 2.3).
 ```
 
 Rules, because the failure mode here is a wall of text nobody reads:
 
 - **Max 10 rows**, ranked CRIT → HIGH → MED → LOW. More than 10 findings: keep the top 10 and say `+N more (MED/LOW)` on the verdict line.
 - **Every row needs a real `path:line`.** No location, no row — a finding you can't open is a guess. Dependency findings use the manifest line (`composer.lock:1204`) or the package name when the tool gives no line.
-- **`Fix` is a fragment, not a sentence.** `bind param`, `use os.Root`, `throttle:6,1`. Detail lives in `references/patterns.md`, not the table.
-- One verdict line: count of reachable CRIT/HIGH, then `blocker` or `clean`.
+- **`Fix` is a fragment, not a sentence.** `bind param`, `use os.Root`, `throttle:6,1`. Detail lives in the language reference, not the table.
+- **The verdict number is literally the count of CRIT + HIGH rows in the table.** Count the rows; don't estimate. A verdict that disagrees with its own table destroys trust in every other number.
+- **`Not scanned:` is one optional line for what you could not check** — a missing scanner, an unreadable dependency, a path you were denied. Use it whenever it applies: silence reads as "clean", and a scan that didn't happen is not a clean scan. One line, no elaboration.
 - No threat-model prose, no STRIDE/DREAD scoring, no checklist dump, no "Summary" paragraph, no next-steps list.
 
-**Never fix without being asked.** No `npm audit fix --force`, no dependency bumps, no edits. Report, then wait. If the user asks for fixes, one finding = one edit, smallest change that closes it.
+**Never edit code in phase 1.** No `npm audit fix --force`, no dependency bumps, no edits at all. Report, then ask.
 
 ## Detect first, then load
 
@@ -103,14 +105,63 @@ Races in Go need a command, not a grep — `go test -race ./...` (findings only 
 
 `Missing headers` is an absence finding — report it once for the app, never per file. Same for rate limiting: one row per unprotected auth surface, not one per route.
 
+### Open the wrapper: a correct primitive name is not a correct configuration
+
+The table above lists `argon2id/bcrypt` and `crypto/rand` as the *fixes*, which makes them look like proof of safety when you grep and find them. They are not. **The parameters that decide whether a primitive is safe live in the call, and often one level below it** — in a project helper or a shared library, not at the site you grepped.
+
+When hashing, encryption, token generation, or signing is delegated to a wrapper (`Hash::make`, `bcryptService.HashPassword`, `supports.Bcrypt`, an internal `crypto` package), **open the wrapper and read the parameters.** Follow it into `vendor/` or the module cache if that's where it lives:
+
+```bash
+grep -rn "func.*HashPassword\|GenerateFromPassword\|argon2\.\|bcrypt\." $(go env GOMODCACHE)/<module>@<version>/ 2>/dev/null
+grep -rn "password_hash\|PASSWORD_" vendor/<vendor>/<pkg>/
+```
+
+What to check once you're there: bcrypt cost (`MinCost` is **4**; the default is 10 and below ~10 is a HIGH finding), argon2 memory/time parameters, AES mode (GCM vs bare CBC/ECB), and whether the RNG is the crypto one. A helper named `Bcrypt` calling `GenerateFromPassword(pw, bcrypt.MinCost)` passes every grep in the table above and is still a real finding.
+
+This generalizes past hashing: a name that matches the GOOD column is a reason to look closer, never a reason to stop. Report the finding at the wrapper's own `path:line` and note in `Fix` when it's upstream and cannot be changed in-repo.
+
+## Gate 1: ask before planning
+
+After the table, ask once — a real question with options, not a rhetorical one. Nothing is written until the answer comes back:
+
+> Lanjut bikin plan perbaikan untuk yang CRIT/HIGH, atau cukup tabelnya?
+
+Offer three: **write the plan**, **fix now without a plan** (they accept the fixes as listed), **just the table**. If there are no CRIT or HIGH rows, don't ask at all — say the table is the whole answer and stop. A plan for three LOW findings is a backlog, not a plan.
+
+The gate exists because the audit is cheap and reversible while the plan and the edits are neither, and because a security fix often has several legitimate shapes with different trade-offs — that choice is the human's.
+
+## Phase 2: the plan
+
+Only after a yes. Read `references/plan-template.md` and follow it. In short:
+
+- One file at `docs/security-audit/<YYYY-MM-DD>-<slug>-plan.md`, relative to the **project root being audited** — not this skill's repo. `<slug>` is kebab-case of the audited scope.
+- **Goals cover CRIT and HIGH only.** MED/LOW stay in the embedded findings table, out of scope, said so explicitly. Ten Goals where three of them matter buries the three.
+- The findings table is **embedded in the plan** under `## Findings`. The audit lived in a chat message; if the plan doesn't carry its own evidence, every Goal becomes an unsourced assertion the week after.
+- No code in the plan. Goals name outcomes; `## Implementation` stays empty for the build phase to fill.
+
+Then stop and ask again before touching code.
+
+## Gate 2 and phase 3: the build
+
+Ask before the first edit, then work the plan top-down, CRIT before HIGH:
+
+- **One finding = one edit.** Never combine two findings in one change — a revert has to be able to undo exactly one finding.
+- **Fix the chain in order.** When one finding enables another, the enabler goes first. Closing a hardcoded secret while an unauthenticated file read still exposes `.env` fixes nothing.
+- **Verify each fix with a real command** and record it: a build, the test suite, a race detector run, or a grep proving the old pattern is gone. Log it under `## Implementation` as you go — that section is the working log, written during the build, not summarized after.
+- **Say what you did not fix and why.** An upstream dependency finding (a wrapper's bcrypt cost in a shared library) may need a wrapper or an upstream bump rather than an edit here. Promising an edit you can't make is worse than naming the constraint.
+- **Rotate, don't just unhardcode.** A secret that reached a repo, a log, or a readable file is compromised; removing the literal doesn't un-leak it. Flag rotation as a step the human must do — you cannot do it for them.
+
 ## What this skill is not
 
-Not a threat-modeling framework, not a compliance/GDPR review, not a secrets-history scan, and not a fan-out of parallel audit agents. It is one pass, one table. If the user wants a design-level review, say so in a sentence and let them ask.
+Not a threat-modeling framework, not a compliance/GDPR review, not a secrets-history scan, and not a fan-out of parallel audit agents. One pass, one table, then only what the human approves. If they want a design-level review, say so in a sentence and let them ask.
 
 ## Files
 
-One per language, loaded only when its manifest is present. Each is BAD/GOOD for the nine classes above — read it to write a fix, not to produce the table.
+Loaded on demand, never all at once.
 
 - `references/php.md` — read when `composer.json` exists
 - `references/typescript.md` — read when `package.json` exists
 - `references/go.md` — read when `go.mod` exists
+- `references/plan-template.md` — read only after the human approves a plan
+
+The three language files are BAD/GOOD for the nine classes above; read one to write a fix, not to produce the table.

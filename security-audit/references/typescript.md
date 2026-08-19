@@ -86,6 +86,16 @@ crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b)); // throws on length mism
 
 `timingSafeEqual` requires equal-length buffers, so hash both sides first if lengths can differ. Encryption: `aes-256-gcm` (authenticated), fresh IV per message, never reuse an IV with the same key.
 
+**The cost argument is the finding, and wrappers hide it.** `await hashPassword(pw)` from an internal `lib/auth` reads as correct; the parameters are one level down:
+
+```typescript
+// lib/auth/hash.ts — or a dependency's dist/
+export const hashPassword = (pw: string) => bcrypt.hash(pw, 4);   // cost 4, not the 10 default
+argon2.hash(pw, { memoryCost: 512 });                             // far below the 19456 default
+```
+
+Open the wrapper before concluding hashing is fine, following it into `node_modules/` when that is where it lives. bcrypt below cost 10, or argon2 with memory/time cut down, is a HIGH finding reported at the wrapper's own `path:line` — note in `Fix` when it is upstream and cannot be changed in-repo.
+
 ## TLS verification disabled — MED
 
 ```typescript

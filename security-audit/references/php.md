@@ -88,6 +88,15 @@ $token = bin2hex(random_bytes(32));
 
 Laravel's `Hash::make()` / `Hash::check()` and `Str::random()` are already correct — the finding is code that bypasses them.
 
+**But check the configured cost, not just the call.** `Hash::make()` reads `config/hashing.php`, so the work factor lives there, not at the call site:
+
+```php
+// config/hashing.php — bcrypt rounds below 10, or argon2 memory/time cut down, is a HIGH finding
+'bcrypt' => ['rounds' => env('BCRYPT_ROUNDS', 12)],
+```
+
+The same applies to any project or package helper that wraps hashing (`app/Support/Hasher.php`, a vendor `Bcrypt` class): open it and read the parameters, following it into `vendor/` when that's where it lives. A wrapper whose name matches the GOOD pattern still fails if it passes a minimum cost. Report it at the wrapper's own `path:line`, and note in `Fix` when it is upstream and cannot be changed in-repo.
+
 ## TLS verification disabled — MED
 
 ```php
