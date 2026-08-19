@@ -1,6 +1,6 @@
 ---
 name: call-graph
-description: Trace how something actually runs, then answer with a verified plain-text tree where every node carries an openable `path:line`. For execution-path, request-path, and "what calls X" questions ("alurnya gimana", "ini dipanggil dari mana"), for architecture overviews, and — on "user flow" / "approval flow" — for non-code flows. Not for single-fact lookups.
+description: Trace how something actually runs, then answer with a verified plain-text tree where every node carries an openable `path:line`. For execution-path, request-path, and "what calls X" questions, for architecture overviews, and — on "user flow" / "approval flow" — for non-code flows. Not for single-fact lookups.
 ---
 
 # call-graph — trace the real path, then draw it
@@ -8,11 +8,6 @@ description: Trace how something actually runs, then answer with a verified plai
 Answer flow questions with a graph, not a paragraph. Read the source, follow the actual edges, and render a hierarchical plain-text tree where every node is a real thing you can point at. The graph is the answer; prose only covers what a tree can't show.
 
 The discipline that makes this useful is refusing to guess. A graph that's 90% right is worse than no graph, because the reader can't tell which 10% is wrong and will act on all of it. Every node you draw is a node you opened the file for.
-
-Not this skill: `code-storyteller` (a narrated HTML walkthrough, one move at a
-time), `explain-code` (teaching how a mechanism works, no trace needed),
-`mindmap-architect` (a hierarchy of ideas, not of calls). If the user wants to
-*understand a concept*, they want those. This one answers *what reaches what*.
 
 ## Step 0 — pick the material
 
