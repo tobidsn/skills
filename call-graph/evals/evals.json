@@ -30,6 +30,30 @@
       "prompt": "ini flow screen buat fitur approve invoice: ada list invoice, klik salah satu buka detail, terus ada drawer buat approve. tolong petakan flow-nya, aku mau review sebelum mulai bikin komponennya",
       "expected_output": "Recognizes the material is an interface flow, not code, and reads references/non-code-graphs.md. Nodes are surfaces with cardinality (list = many, detail = one), edges are the moves. Crucially enumerates void states per surface with `?` lines (empty / loading / partial / error / denied) and preconditions with `!` lines (selected record, permission, focus release for the drawer) — these are the substance of the answer, not decoration. Because nothing openable exists yet, the graph is titled [proposed] and carries NO fabricated `src:` block, with one line saying it reflects described intent rather than verified source.",
       "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "/call-graph brainstorm flow register api",
+      "expected_output": "Design mode. Output has the same shape as a trace answer — `graph:` title, `ts` fence, two-space `→` tree — but the title carries [proposed], and because nothing was scouted there is NO `src:` block and NO line number anywhere in the answer. The substance is the break-point checklist: every node that crosses a network, touches a store, or validates untrusted input carries a `?` line naming retried / recovered / fatal and what was written when the response is sent; the transaction node carries `!` naming release on both commit and rollback; the queued email carries `!` naming its position relative to the commit (dispatched after, so a failed send never undoes the account). `?` is used for failure and absence only — an ordering guarantee filed under `?` instead of `!` is a failure. Below the tree, an `open:` block of at most five numbered decisions, each stating what the choice costs either way and carrying a recommendation rather than a bare question (hash-before-transaction, duplicate-email response shape, token TTL/single-use, rate-limit numbers). The block must be present in the answer text regardless of how the questions are asked — asking the discrete items through an interactive question tool as well is fine and encouraged, but an answer where the decisions exist only in that tool and not in the rendered block is a failure. Closes by offering `/call-graph plan` as the next step and stopping — it must NOT write a file.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "/call-graph design flow reset password buat project ini",
+      "expected_output": "Design mode, grounded. Scouts before drawing — CLAUDE.md/AGENTS.md, the route table, and one adjacent flow — on a 3–6 read budget, then expresses the design in the repo's own vocabulary (Laravel controller → Form Request → Action layering, not generic UserRepo names). Nodes that already exist carry real verified `path:line` in a partial `src:` block closed by `[new] nodes — not yet implemented`; every `[new]` node is absent from that block and has no line number. Title carries [proposed]. Break-point checklist applied as in eval 6, plus an `open:` block and the closing offer of `/call-graph plan`. If the scout finds a reset-password flow already exists, the correct behavior is to say so and offer the trace instead of designing over it.",
+      "files": ["fixtures/php-laravel-app/"]
+    },
+    {
+      "id": 8,
+      "prompt": "/call-graph plan tambahin rate limit di endpoint login",
+      "expected_output": "Plan mode. Writes exactly one file at docs/plans/<YYYY-MM-DD>-<slug>.md with the date taken from `date +%F` rather than guessed, and edits nothing else — no code, no branches, no commits. The `## Graph` section carries two graphs sharing a spine: the as-is trace with a full `src:` block where every node was actually opened, then the [proposed] graph with `[new]` nodes marked, no line numbers, and no `src:` block of its own (the as-is graph above already holds that evidence). Every `[new]` or changed node is findable in a Goal that names it, and every Goal maps to a node. Context lists only files that exist, each with its current state rather than just its purpose. `Done when` uses the project's real verification command read from CLAUDE.md — not an invented one — and prefers a check that the old behavior is now impossible. `## Implementation` is present and empty with its comment intact. No implementation code blocks anywhere in the file.",
+      "files": ["fixtures/php-laravel-app/"]
+    },
+    {
+      "id": 9,
+      "prompt": "design the checkout flow di project ini gimana enaknya?",
+      "expected_output": "Dispatch boundary: no subcommand, so this is a TRACE, not design mode — the skill infers mode only from an explicit first-token subcommand, never from phrasing like 'design'. Correct behavior is to trace whatever checkout flow exists and answer with a verified graph plus `src:`. If nothing traceable turns up, say so plainly and offer `/call-graph brainstorm checkout` in one line rather than silently switching modes and emitting a [proposed] graph. Producing a design graph here is the failure this eval exists to catch.",
+      "files": ["fixtures/ts-express-app/"]
     }
   ]
 }

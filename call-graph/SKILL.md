@@ -1,13 +1,37 @@
 ---
 name: call-graph
-description: Trace how something actually runs, then answer with a verified plain-text tree where every node carries an openable `path:line`. For execution-path, request-path, and "what calls X" questions, for architecture overviews, and — on "user flow" / "approval flow" — for non-code flows. Not for single-fact lookups.
+description: Trace how something actually runs, then answer with a verified plain-text tree where every node carries an openable `path:line`. For execution-path, request-path, and "what calls X" questions, for architecture overviews, and — on "user flow" / "approval flow" — for non-code flows. Two explicit subcommands extend the same notation to work that doesn't exist yet: `/call-graph brainstorm <idea>` designs a flow and iterates on it until the open decisions are settled, `/call-graph plan <idea>` writes `docs/plans/<date>-<slug>.md` carrying an as-is trace plus the target shape. Not for single-fact lookups.
 ---
 
 # call-graph — trace the real path, then draw it
 
 Answer flow questions with a graph, not a paragraph. Read the source, follow the actual edges, and render a hierarchical plain-text tree where every node is a real thing you can point at. The graph is the answer; prose only covers what a tree can't show.
 
-The discipline that makes this useful is refusing to guess. A graph that's 90% right is worse than no graph, because the reader can't tell which 10% is wrong and will act on all of it. Every node you draw is a node you opened the file for.
+The discipline that makes this useful is refusing to guess. A graph that's 90% right is worse than no graph, because the reader can't tell which 10% is wrong and will act on all of it. Every node you draw is a node you opened the file for — and in the modes that design work rather than trace it, every node you *couldn't* open is marked `[new]` and never given a line number.
+
+## Modes
+
+Three modes, chosen by an explicit subcommand. Everything after this section — the four materials, the notation, the `?` / `!` semantics, the node cap, the refusal to guess — is shared by all three.
+
+```
+/call-graph <anything>          → trace     (default)
+/call-graph brainstorm <idea>   → design
+/call-graph design <idea>       → design
+/call-graph plan <idea>         → plan document
+```
+
+A mode word counts only as the **first token, and only when something follows it**. `/call-graph plan checkout` plans; bare `/call-graph plan` asks what to plan rather than tracing a symbol named `plan`. With no mode word you are tracing — there is no inference from phrasing here, deliberately. "Design the checkout flow" without the subcommand is answered as a trace; if nothing traceable turns up, say so and offer the subcommand in one line.
+
+| | **trace** | **brainstorm** | **plan** |
+|---|---|---|---|
+| Answers | what happens now | what should happen | how to get from one to the other |
+| Graphs | one, verified | one, `[proposed]` | two — as-is, then `[proposed]` |
+| Evidence | full `src:` | existing nodes only, or none | `src:` on the as-is graph only |
+| Output | chat | chat, iterated | `docs/plans/<date>-<slug>.md` |
+| Done when | the scope is covered | `open:` is empty | the file is written |
+| Read first | — | `references/design-graphs.md` | `references/plan-mode.md` |
+
+The modes chain — trace what's there, design what should be, plan the move — but never on their own. Each ends by naming the next in one line and stopping. A mode that chains itself writes a file nobody asked for.
 
 ## Step 0 — pick the material
 
@@ -154,7 +178,7 @@ Markers, all of them:
 | `[async]` | Dispatched, not awaited — the caller doesn't block |
 | `[unverified]` | A hop you believe exists but couldn't confirm |
 | `[new]` | Doesn't exist yet — never give it a line number |
-| `[proposed]` | In the title: the whole graph is intent, not a trace — drop `src:` entirely |
+| `[proposed]` | In the title: the graph is intent, not a trace — `src:` carries only nodes that already exist, never `[new]` ones |
 | `? ` | How this node fails or is absent — annotation line, no arrow |
 | `! ` | What this node needs, or must release — annotation line, no arrow |
 | `… ` | An elided subtree, with the count — `→ … (9 more)` |
@@ -200,7 +224,14 @@ Offer this once, when it's relevant. Don't write to their instruction files unpr
 
 ## Reference files
 
-None of these are required reading. The format above is complete; these exist for the cases it doesn't cover. Loading one costs roughly as much as tracing three nodes, so open it only for the reason listed.
+Two of these are required, and only when you're in the mode that names them — a mode's file carries rules the notation above doesn't imply. The rest are optional: the format above is complete, and they exist for the cases it doesn't cover. Loading one costs roughly as much as tracing three nodes, so open it only for the reason listed.
+
+Required, per mode:
+
+- `references/design-graphs.md` — **read before answering `/call-graph brainstorm`.** The grounding scout, the break-point checklist that decides when a design is finished, how to derive the `open:` block, and the iteration protocol.
+- `references/plan-mode.md` — **read before answering `/call-graph plan`.** The two-graph structure, how Goals cite nodes, and what the mode refuses to do. It points at `references/plan-template.md` for the document itself.
+
+Optional, for trace mode:
 
 - `references/output-format.md` — worked examples (TypeScript, Laravel, inverted caller graphs) and the seven ways these graphs go wrong. Open when a specific case is unclear, not to recall the grammar.
 - `references/entry-points.md` — per-framework recipes for finding the real root, and for resolving DI bindings, events, jobs, and dynamic dispatch. Open when the framework is unfamiliar or a hop won't resolve.
