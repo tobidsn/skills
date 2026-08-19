@@ -44,6 +44,7 @@ Domain-agnostic, spec-driven skills that take a task from idea → plan → buil
 | `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports GitHub (`gh`) and GitLab (`glab`). `list` open issues or deep-review one into a triage verdict |
 | `call-graph` | Answer flow questions with a verified plain-text graph — root → what it reaches, every node backed by an openable `path:line`. Language-agnostic code tracing, plus interface flows, agent orchestration, and pipeline/approval processes |
 | `promo-card` | Landscape PNG announcement card for a skill, feature, or release — self-contained HTML rendered to an exact pixel size through headless Chrome, verified in the DOM before the screenshot is taken |
+| `security-audit` | Lightweight audit in two modes — `deps` runs every ecosystem it detects (a Laravel + Vite app gets both `composer audit` and `npm`/`pnpm`/`yarn`/`bun audit`; Go gets `govulncheck`) and triages by reachability; `code` greps the high-signal classes (SQL/command injection, XSS, path traversal, weak crypto, TLS off, rate limits, races, headers). Fix patterns are split per language and loaded only for the manifests present. Output is one ranked `path:line` table, never an auto-patch |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `agent-memory` | Persistent cross-conversation memory storage |
 | `find-skills` | Discover and install skills from the public ecosystem |

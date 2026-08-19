@@ -31,6 +31,7 @@ Each skill is a directory containing:
 | `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports `gh` (GitHub) and `glab` (GitLab) |
 | `call-graph` | Verified plain-text graphs for flow/trace/"what calls X"/overview questions — every node carries `path:line` evidence. Four materials: code (language-agnostic), interface flows, orchestration, process |
 | `promo-card` | Landscape PNG announcement cards for a skill/feature/release — self-contained HTML rendered to an exact pixel size via headless Chrome, with DOM verification before the screenshot |
+| `security-audit` | Lightweight two-mode audit: `deps` (runs every detected ecosystem — composer + npm coexist in a Laravel app — then triages by reachability) and `code` (grep the high-signal vuln classes). Fix patterns split per language in `references/{php,typescript,go}.md`, loaded only for manifests present. Output capped at one ranked `path:line` table; never auto-patches |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `autoresearch` | Autonomous LLM training experiments with karpathy/autoresearch: setup, experiment loop, train.py modifications, val_bpb metric, program.md guidance |
 | `agent-memory` | Persistent cross-conversation memory storage |
