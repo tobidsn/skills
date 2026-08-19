@@ -24,9 +24,11 @@ Each skill is a directory containing:
 | `ant-laravel-specialist` | Orchestrator — routes tasks to focused ant-* skills |
 | `ant-laravel-api` | REST API architecture: ApiResponse, Sanctum, Form Requests, Resources |
 | `ant-laravel-eloquent` | Eloquent optimization: N+1 prevention, indexes, pagination |
+| `ant-laravel-api-cache` | API response caching + N+1 fixes for anticms-style projects: serialize-before-cache, invalidation groups, TTL patterns, Scramble pitfalls, query-count verification harness |
 | `ant-laravel-design-patern` | Design patterns: Strategy, Factory, Builder, Observer, Actions, Events |
 | `ant-dedoc-scramble` | OpenAPI 3.1 docs via Laravel Scramble |
 | `ant-important-code` | Antikode discipline enforcer: minimal code, no unsolicited implementation |
+| `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports `gh` (GitHub) and `glab` (GitLab) |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `autoresearch` | Autonomous LLM training experiments with karpathy/autoresearch: setup, experiment loop, train.py modifications, val_bpb metric, program.md guidance |
 | `agent-memory` | Persistent cross-conversation memory storage |
