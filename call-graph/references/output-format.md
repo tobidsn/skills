@@ -1,6 +1,6 @@
 # Output format contract
 
-The grammar every call-graph answer follows. The point of a fixed format is that a reader who has seen one of these can read all of them without re-learning the notation — and that graphs from different repos can be compared side by side.
+The grammar every call-graph answer follows, whatever the material — code, interface, orchestration, or process. The point of a fixed format is that a reader who has seen one of these can read all of them without re-learning the notation, and that graphs from different sources can be compared side by side. Material-specific guidance lives in `non-code-graphs.md`; the grammar here is shared.
 
 ## Contents
 
@@ -66,10 +66,15 @@ Use these sparingly — they exist so the tree can carry conditionality without 
 | `[new]` | A node that does not exist yet (planned work) | `→ [new] TokenRotator.rotate` |
 | `[unverified]` | Hop you believe exists but could not confirm | `→ [unverified] LegacyHook.fire` |
 | `[async]` | Dispatched, not awaited — caller does not block | `→ [async] SendWelcomeEmail` |
+| `[proposed]` | The whole graph is a proposal, not a trace — goes in the title | `graph: [proposed] token rotation` |
+| `? ` | A way this node fails or is absent, on its own line under the node | `? error: falls back to cached price` |
+| `! ` | Something the node needs, or must release, on its own line | `! release: lock freed in finally (job.ts:88)` |
 
 Rules for markers:
 - **Never invent a line number for a `[new]` node.** It has no line yet. Omit it from `src:` or write `— not yet implemented`.
 - **`[unverified]` is a last resort, not a shortcut.** Prefer opening the file. When you do use it, say in the notes what blocked resolution (dynamic dispatch, generated code, vendor binary).
+- **`[proposed]` replaces the `src:` block, it doesn't decorate it.** A proposal has nothing to cite. Say in one line that the graph reflects described intent rather than verified source.
+- **`?` and `!` lines are indented as children of the node they describe** but take no arrow, so they read as annotations rather than calls. They come into their own for interface and process graphs, where failure states and preconditions *are* the substance of the question — see `non-code-graphs.md`. In code graphs, prefer keeping this in the notes unless a specific node's failure mode is the point of the question.
 
 ## The `src:` evidence block
 
@@ -204,5 +209,6 @@ The specific ways these graphs go wrong, worth checking before you send one:
 2. **Indirection left unresolved.** An interface, event, or job name in the tree with no implementation beneath it. Find the binding (container, provider, module, listener map) or mark it `[unverified]`.
 3. **Line numbers reconstructed from memory.** They drift. Record them while the file is open.
 4. **A fabricated Tests section.** If you did not read a test, there is no Tests section.
-5. **Scope creep.** The graph kept growing into neighboring subsystems. Answer the question asked; offer the next trace in one line.
-6. **Prose that repeats the tree.** Notes exist for what the tree cannot show. If a note restates an arrow, delete it.
+5. **A proposal presented as a trace.** The graph came from what someone described, not from a source you opened, but it carries a `src:` block anyway. Title it `[proposed]` and drop the citations.
+6. **Scope creep.** The graph kept growing into neighboring subsystems. Answer the question asked; offer the next trace in one line.
+7. **Prose that repeats the tree.** Notes exist for what the tree cannot show. If a note restates an arrow, delete it.

@@ -42,7 +42,7 @@ Domain-agnostic, spec-driven skills that take a task from idea → plan → buil
 | Skill | Description |
 |-------|-------------|
 | `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports GitHub (`gh`) and GitLab (`glab`). `list` open issues or deep-review one into a triage verdict |
-| `call-graph` | Answer flow questions with a verified plain-text call graph — entry point → callees, every node backed by a real `path:line`. Language-agnostic |
+| `call-graph` | Answer flow questions with a verified plain-text graph — root → what it reaches, every node backed by an openable `path:line`. Language-agnostic code tracing, plus interface flows, agent orchestration, and pipeline/approval processes |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `agent-memory` | Persistent cross-conversation memory storage |
 | `find-skills` | Discover and install skills from the public ecosystem |

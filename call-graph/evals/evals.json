@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "alur login di app ini gimana sih? dari request masuk sampai token kesimpen. jelasin dong",
-      "expected_output": "Leads with a plain-text call graph in a `ts` fence rooted at the HTTP route (POST /api/login, not the controller), two-space-indented `→` children, followed by a `src:` block giving path:line for every unique node. Middleware/validation appear as nodes. Async or queued steps are marked [async]. No Mermaid. Three to five notes covering only what the tree can't show (conditions, error paths, gotchas). No Tests section unless the test wiring genuinely differs in shape.",
+      "expected_output": "Leads with a plain-text call graph in a `ts` fence rooted at the HTTP route (POST /api/login, not the controller), two-space-indented `→` children, followed by a `src:` block giving path:line for every unique node. Middleware/validation appear as nodes. Async or queued steps are marked [async]. No Mermaid. Three to five notes covering only what the tree can't show — including which break points retry, recover, or are fatal, and any acquired resource whose release isn't guaranteed on the error path. No Tests section unless the test wiring genuinely differs in shape.",
       "files": ["fixtures/ts-express-app/"]
     },
     {
@@ -18,6 +18,18 @@
       "prompt": "port berapa sih service ini jalan di local?",
       "expected_output": "Answers the single fact directly with the port and its source (path:line), and does NOT produce a call graph — this is exactly the trivial single-fact case the skill says to skip. Correct behavior here is restraint; drawing a tree would be a failure.",
       "files": ["fixtures/ts-express-app/"]
+    },
+    {
+      "id": 4,
+      "prompt": "gue baru join tim ini. bisa jelasin arsitektur project ini secara garis besar?",
+      "expected_output": "Proactively leads with a call graph of the codebase's main flow even though the user never asked for a graph — this is the 'include graphs in project overviews and architecture summaries' rule. Graph is verified with a `src:` block, then prose narrates around it (layering, conventions, where things live). Does not ask permission before drawing the graph, and does not answer with prose alone.",
+      "files": ["fixtures/ts-express-app/"]
+    },
+    {
+      "id": 5,
+      "prompt": "ini flow screen buat fitur approve invoice: ada list invoice, klik salah satu buka detail, terus ada drawer buat approve. tolong petakan flow-nya, aku mau review sebelum mulai bikin komponennya",
+      "expected_output": "Recognizes the material is an interface flow, not code, and reads references/non-code-graphs.md. Nodes are surfaces with cardinality (list = many, detail = one), edges are the moves. Crucially enumerates void states per surface with `?` lines (empty / loading / partial / error / denied) and preconditions with `!` lines (selected record, permission, focus release for the drawer) — these are the substance of the answer, not decoration. Because nothing openable exists yet, the graph is titled [proposed] and carries NO fabricated `src:` block, with one line saying it reflects described intent rather than verified source.",
+      "files": []
     }
   ]
 }
