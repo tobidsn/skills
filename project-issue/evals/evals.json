@@ -1,0 +1,23 @@
+{
+  "skill_name": "project-issue",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "cek issue project ini dong, ada yang perlu difix gak?",
+      "expected_output": "Resolves the repo from `git config --get remote.origin.url`, picks gh or glab by host, preflights auth, then renders a compact table of open issues sorted by severity/activity, ending with a hint to review one via `project-issue <number>`. Does not auto-review any issue.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "project-issue 42",
+      "expected_output": "Fetches issue #42 via the platform CLI for the repo found in .git/config, flags it if closed, extracts any stack trace file:line frames, reads the implicated code in the working directory, checks for duplicate issues, and produces the structured triage report (What's happening / Root cause / Verdict / Recommended next step). No branch, commit, or platform write happens.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "review issue ini https://gitlab.com/acme/backend/api/-/issues/17",
+      "expected_output": "Extracts issue 17 and repo path acme/backend/api (subgroup preserved) from the URL, uses glab, and warns if the URL's repo differs from the local remote before producing the triage report. If glab is missing or unauthenticated, stops with concrete install/login instructions instead of falling back.",
+      "files": []
+    }
+  ]
+}

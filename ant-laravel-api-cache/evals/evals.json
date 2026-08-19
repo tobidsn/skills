@@ -1,0 +1,23 @@
+{
+  "skill_name": "ant-laravel-api-cache",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Di project Laravel CMS ini, endpoint GET /api/v2/pages/{slug} sudah pakai cache()->rememberForever tapi tiap request tetap jalan belasan query menurut debugbar. Ini kode controllernya:\n\npublic function getPage($slug)\n{\n    $data = cache()->rememberForever(\n        config('cache.cache_post_resource') . $slug . '_' . $this->locale . '_v2',\n        function () use ($slug) {\n            $post = $this->postService->findBySlug($slug, PostType::PAGE->value);\n            if (!$post) return null;\n            return new PostResource($post);\n        }\n    );\n    if (!$data) return ApiResponse::error('Error not found', 404);\n    return ApiResponse::json($data);\n}\n\nKenapa cache-nya ngk works dan gimana benerinnya?",
+      "expected_output": "Diagnosis that the resource OBJECT is cached instead of its serialized output (toArray runs every request), and a rewrite that serializes to a plain array before caching (with self-heal for legacy entries, 404 not cached), plus mention of verifying warm hits run 0 queries.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Tolong review query performance service ini, resource AdvancePostResource baca $item->translations untuk tiap meta:\n\n$query = Post::type($type)\n    ->with('translations', 'meta.lang', 'featuredImageFile')\n    ->published()\n    ->orderBy($field, $direction);\n\nDebugbar nunjukin banyak query 'select * from metas_lang where base_id = ?' berulang-ulang satu per satu. Fix dong.",
+      "expected_output": "Identifies the wrong-relation eager load (meta.lang is hasOne, resource reads meta.translations hasMany) causing per-row lazy loads; fixes to meta.translations and recommends grepping other services for the same pattern; ideally also suggests eager-loading category.translations/tags if the resource reads them.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Aku mau tambahin response caching ke endpoint search dan posts-by-tag di API Laravel kita (project mirip anticms, ada ApiResponse::paginate dan Scramble buat docs). Search jangan di-cache selamanya ya. Tag yang ngk ada harus tetep balas 404. Tulis kodenya.",
+      "expected_output": "TTL-based remember() caching with serialized arrays + pagination meta kept inline in the controller (not via a closure-taking paginated helper, citing the Scramble crash risk), a not_found sentinel for the tag 404 case, warm path responding via ApiResponse::apiResponse (not paginate on arrays), and a reminder to verify /docs/api.json still returns 200.",
+      "files": []
+    }
+  ]
+}

@@ -41,6 +41,7 @@ Domain-agnostic, spec-driven skills that take a task from idea → plan → buil
 
 | Skill | Description |
 |-------|-------------|
+| `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports GitHub (`gh`) and GitLab (`glab`). `list` open issues or deep-review one into a triage verdict |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `agent-memory` | Persistent cross-conversation memory storage |
 | `find-skills` | Discover and install skills from the public ecosystem |
@@ -77,6 +78,7 @@ npx skills add tobidsn/skills@mindmap-architect
 npx skills add tobidsn/skills@workflow
 npx skills add tobidsn/skills@creator-spec
 npx skills add tobidsn/skills@creator-plan
+npx skills add tobidsn/skills@project-issue
 ```
 
 ### Install globally (recommended)
