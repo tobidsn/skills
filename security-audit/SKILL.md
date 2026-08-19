@@ -126,13 +126,23 @@ Signals are tagged by language — **run only the tags you detected.** A Go-only
 | HIGH | Path traversal | `php:` request input reaching `file_get_contents\|fopen\|include` · `ts:` `path.join\(` with `req\.` · `go:` `filepath.Join` with user input | `os.Root` (Go 1.24+) / resolve + prefix check |
 | HIGH | Weak crypto / RNG | `php:` `md5\(\|sha1\(` on passwords, `mt_rand` · `ts:` `Math.random` for tokens · `go:` `"math/rand"` for tokens · all: `==`/`===` comparing secrets | argon2id/bcrypt · CSPRNG · constant-time compare |
 | MED | TLS disabled | `php:` `withoutVerifying\|'verify'\s*=>\s*false` · `ts:` `rejectUnauthorized:\s*false` , `NODE_TLS_REJECT_UNAUTHORIZED` · `go:` `InsecureSkipVerify:\s*true` | remove the override, pin the CA |
-| MED | Rate limiting | auth/login/reset surfaces with no `php:` `throttle:` · `ts:` `express-rate-limit` · `go:` `x/time/rate` or server timeouts | throttle the auth routes |
+| HIGH | Unbounded verify attempts | OTP/2FA/reset verify with no cap on *wrong* guesses — a request-rate limiter alone does not count failures | 3 failures / 15 min per identity |
+| MED | Unthrottled public write | public `POST\|PUT\|PATCH\|DELETE` with no `php:` `throttle:` · `ts:` `express-rate-limit`, `@Throttle` · `go:` `x/time/rate` — and no server timeouts | throttle the write surface |
 | HIGH | Race condition | `php:` check-then-act with no `lockForUpdate\(\)\|Cache::lock` · `ts:` read-modify-write across an `await`, no transaction · `go:` shared map/counter across goroutines | row lock / mutex / atomic |
 | LOW | Missing headers | zero hits app-wide for `helmet\|Content-Security-Policy\|Strict-Transport-Security` | security-headers middleware |
 
 Races in Go need a command, not a grep — `go test -race ./...` (findings only from paths the tests exercise).
 
-`Missing headers` is an absence finding — report it once for the app, never per file. Same for rate limiting: one row per unprotected auth surface, not one per route.
+`Missing headers` is an absence finding — report it once for the app, never per file. Same for the throttling rows: one row per unprotected surface, not one per route.
+
+**Absences cannot be grepped, so enumerate then subtract.** Grepping `throttle:` finds the routes that *are* protected and says nothing about the ones that aren't — and a handful of hits reads as "handled". List the write endpoints, then look at which ones have neither a limiter nor authentication:
+
+```bash
+php artisan route:list --method=POST --json     # Laravel: check the middleware column
+grep -rEn "\.(post|put|patch|delete)\(" src/    # Express/Nest: compare against limiter mounts
+```
+
+When either throttling row fires, or the endpoint is public and costs money per request (SMS, email, a paid API), read `references/rate-limits.md` for the numbers, the four OTP controls, and the reCAPTCHA v3 checks. Don't invent limits from memory — an OTP cap guessed wrong is either someone's SMS bill or a locked-out user base.
 
 ### Open the wrapper: a correct primitive name is not a correct configuration
 
@@ -195,6 +205,7 @@ Loaded on demand, never all at once.
 - `references/php.md` — read when `composer.json` exists
 - `references/typescript.md` — read when `package.json` exists
 - `references/go.md` — read when `go.mod` exists
+- `references/rate-limits.md` — read when a throttling row fires, an OTP/verification flow is in scope, or a public endpoint costs money per request
 - `references/plan-template.md` — read only after the human approves a plan
 
 The three language files are BAD/GOOD for the nine classes above; read one to write a fix, not to produce the table.
