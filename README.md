@@ -97,6 +97,14 @@ npx skills add tobidsn/skills@ant-laravel-specialist -g
 npx skills add tobidsn/skills@ant-laravel-api -g -y
 ```
 
+### Install from a local clone
+
+To try a skill before it's published — or while editing one — symlink it into your global skills directory. Edits then take effect on the next session with no reinstall:
+
+```bash
+ln -s "$(pwd)/call-graph" ~/.claude/skills/call-graph
+```
+
 ### Update installed skills
 
 ```bash
@@ -117,8 +125,44 @@ Once installed, skills activate automatically when you work on relevant tasks in
 - Asking about an N+1 query issue → `ant-laravel-eloquent` activates
 - Asking to document an API → `ant-dedoc-scramble` activates
 - Asking to "mindmap this YouTube video" or "make a mindmap of these notes" → `mindmap-architect` activates
+- Asking "how does the login flow work" or "what calls this function" → `call-graph` activates
 
 The `ant-laravel-specialist` orchestrator skill will route your request to the right focused skill based on context.
+
+### Using `call-graph`
+
+Ask a flow question in plain language — no special syntax needed:
+
+```
+alur login di app ini gimana? dari request masuk sampai token kesimpen
+what calls UserRepository::findByEmail?
+trace POST /api/v1/campaign/redeem-offers
+/call-graph how does token refresh work
+```
+
+It also fires on requests that aren't phrased as flow questions but are answered by one — "explain this codebase", "what does this module do", onboarding walkthroughs. It leads with the graph there instead of waiting to be asked, and stays out of the way for single-fact questions ("what port does this run on") where a tree would just be padding.
+
+The answer is always plain text — never Mermaid — so it survives being pasted into a terminal, a PR review, or a commit message:
+
+```ts
+POST /api/v1/campaign/redeem-offers
+  → middlewares.authMiddleware
+    → databaseService.getProject
+      → {mongo:projects}
+    ? 401: no Bearer, unknown project, verify fails
+  → fraudService.checkRedeemQuota
+    → databaseService.countRecentRedeems → {mongo:redeem_offers}
+  → databaseService.insertPendingRedeem
+    ? dup key → 200 replays first response, or 409 in progress
+  → casClientService.redeemOffers
+    ! on throw: deletePendingRedeem, then rethrow → 500
+```
+
+Every node comes with a `src:` block giving its `path:line`, so any hop can be spot-checked in seconds. Below that, a few notes cover what a tree can't: which failures retry, recover, or are fatal; resources acquired without a guaranteed release; loops that hide N+1s; branches that can no longer run.
+
+**Four materials.** Code is the default and works on any language. The same notation covers interface flows (surfaces and the moves between them, with empty/loading/partial/error/denied states per surface), agent or task orchestration (waves, gates, data dependencies), and process flows (CI/CD, data pipelines, approval chains). When nothing openable exists yet — a flow you've only described — the graph is labeled `[proposed]` and drops the `src:` block rather than citing sources that don't exist.
+
+**Pinning the format.** To make every future answer in a project use this shape, ask it to add the convention to your `AGENTS.md` or `CLAUDE.md`; it appends a short rule rather than rewriting the file.
 
 ## Antikode Architecture Principles
 
