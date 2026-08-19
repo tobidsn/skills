@@ -1,11 +1,31 @@
 ---
 name: security-audit
-description: Lightweight security audit, then optionally a fix plan and the fixes — human confirms between each phase. Runs the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and greps the high-signal classes: SQL injection, command injection, XSS, path traversal, weak crypto, TLS/header gaps, missing rate limits, race conditions. Use whenever someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, or review a diff for security problems — and when they then want those findings turned into a plan at `docs/security-audit/` or actually fixed. Phase one is one ranked table with openable `path:line` and never an edit.
+description: Lightweight security audit, then optionally a fix plan and the fixes. Runs the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and greps the high-signal classes: SQL injection, command injection, XSS, path traversal, weak crypto, TLS/header gaps, missing rate limits, race conditions. Use whenever someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, or review a diff for security problems — and when they want those findings turned into a plan at `docs/security-audit/` or actually fixed. Has an auto mode ("audit auto", "audit dan langsung bikin plan", "audit and plan the fixes") that writes the plan without stopping to ask. Phase one is one ranked table with openable `path:line` and never an edit; code changes always wait for explicit approval.
 ---
 
 # security-audit
 
-Three phases, each gated by the human: **audit** → *ask* → **plan** → *ask* → **build**. Phase one is a table and nothing else; the later phases only happen if asked for.
+Three phases: **audit** → **plan** → **build**. Phase one is a table and nothing else; the later phases only happen when the human has said so.
+
+## Interactive or auto
+
+**Interactive** (default) — audit, then ask before planning, then ask again before editing code. Use this when the request is just "audit this".
+
+**Auto** — audit and write the plan in one pass, no question in between, then stop at the build gate. Enter auto when the request already reaches past the table:
+
+- `/security-audit auto`, `audit auto`, `--auto`
+- "audit dan langsung bikin plan", "audit lalu buatkan plan-nya", "audit + plan"
+- "audit this and give me a remediation plan", "audit and plan the fixes"
+
+The point of auto isn't speed, it's not asking a question the human already answered. If someone asked for a plan in their opening message, stopping to ask whether they want a plan is noise — read the intent and go.
+
+**What auto changes:** exactly one thing, gate 1. Nothing else relaxes.
+
+**What auto never skips:**
+
+- **The build gate.** Auto stops after writing the plan, every time. A plan is a Markdown file you can delete; the fixes are code changes that break callers, lock users out, and encode product decisions. A real audit of a real service turned up a fix that would have locked out every existing user and another that would have silently killed a cron job — neither is a call to make while nobody is looking. Only an explicit, separate "kerjakan planya" / "apply the fixes" opens phase 3.
+- **No CRIT or HIGH means no plan.** Auto still checks this first. A plan for three LOW findings is a backlog; say the table is the whole answer and stop. Auto is permission to skip a question, not a reason to manufacture work.
+- **Tracing before reporting.** Auto does not license a faster, shallower audit. Same verification, same `path:line` on every row, same `Not scanned:` honesty.
 
 ## Phase 1 output contract
 
@@ -51,7 +71,7 @@ ls package-lock.json pnpm-lock.yaml yarn.lock bun.lock bun.lockb composer.lock g
 
 **A project can match more than one, and usually does.** A Laravel app with a Vite/Inertia frontend has `composer.json` *and* `package.json`: run **both** audits, read **both** reference files, and merge everything into the single output table. Same for a Go service with an embedded JS admin panel.
 
-## Mode: deps
+## Scanning dependencies
 
 Run every ecosystem you detected — not just the first one. Within one ecosystem, pick the command from the committed lockfile; never assume npm because `package.json` exists.
 
@@ -71,7 +91,15 @@ In a monorepo, the lockfile at the workspace root owns the install; don't audit 
 Two gates that fail confusingly if you skip them:
 
 - **`composer audit` needs Composer ≥ 2.4.** Run `composer --version` first. Older: report `composer audit unavailable (Composer <2.4)` as a LOW row and fall back to `local-php-security-checker --path=composer.lock`, or advise upgrading Composer — do not upgrade it yourself.
-- **`govulncheck` is not bundled with Go.** If `command -v govulncheck` is empty, install is `go install golang.org/x/vuln/cmd/govulncheck@latest` (needs `$GOPATH/bin` on `PATH`). Ask before installing.
+- **`govulncheck` is not bundled with Go, and you don't need to install it.** When `command -v govulncheck` is empty, run it without touching the machine:
+
+  ```bash
+  go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+  ```
+
+  This leaves no binary on `$PATH` and needs no permission to install anything. Prefer it over `go install` every time — reach for `go install golang.org/x/vuln/cmd/govulncheck@latest` only if the user asks for the tool permanently, and ask first. If `go run` can't fetch the module (offline, no cache, restricted proxy), say so on the `Not scanned:` line rather than reporting the dependencies as clean.
+
+  `govulncheck` also covers the **standard library at the toolchain that builds the code**, which is a finding class no lockfile shows. When it reports stdlib vulnerabilities, check whether CI pins a newer Go than the local toolchain and whether `go.mod` has a `toolchain` directive holding the floor — a repo where CI is clean and dev machines are not is a real MED finding at `go.mod`.
 
 Then triage — advisory count is not the finding, reachability is:
 
@@ -81,7 +109,7 @@ Then triage — advisory count is not the finding, reachability is:
 
 An unreachable critical is a MED row, not a CRIT row. Say why in `Fix`: `dev-only`, `unreachable`.
 
-## Mode: code
+## Scanning code
 
 Default target is the working diff (`git diff --name-only` plus staged); a path argument overrides it. On "audit the whole project", scope to the app source dirs and skip `vendor/`, `node_modules/`, `dist/`, generated code.
 
@@ -122,13 +150,15 @@ This generalizes past hashing: a name that matches the GOOD column is a reason t
 
 ## Gate 1: ask before planning
 
+**Interactive mode only — auto mode skips straight to phase 2.**
+
 After the table, ask once — a real question with options, not a rhetorical one. Nothing is written until the answer comes back:
 
 > Lanjut bikin plan perbaikan untuk yang CRIT/HIGH, atau cukup tabelnya?
 
 Offer three: **write the plan**, **fix now without a plan** (they accept the fixes as listed), **just the table**. If there are no CRIT or HIGH rows, don't ask at all — say the table is the whole answer and stop. A plan for three LOW findings is a backlog, not a plan.
 
-The gate exists because the audit is cheap and reversible while the plan and the edits are neither, and because a security fix often has several legitimate shapes with different trade-offs — that choice is the human's.
+The gate exists because a security fix often has several legitimate shapes with different trade-offs, and that choice belongs to the human. It is a cheap question, so ask it — unless they already answered it by asking for a plan up front, which is what auto mode is for.
 
 ## Phase 2: the plan
 
@@ -143,7 +173,9 @@ Then stop and ask again before touching code.
 
 ## Gate 2 and phase 3: the build
 
-Ask before the first edit, then work the plan top-down, CRIT before HIGH:
+**This gate holds in every mode, including auto.** Ask before the first edit — and stop again, mid-build, if a Goal turns out to need a decision the code cannot answer (an unused `Status` flag with no activation flow behind it, a route with unknown callers). Guessing there is worse than pausing.
+
+Then work the plan, CRIT before HIGH, **in the order `Notes` gives** when it names an ordering constraint — that order can differ from severity order, and following severity blindly can undo the fix you just made:
 
 - **One finding = one edit.** Never combine two findings in one change — a revert has to be able to undo exactly one finding.
 - **Fix the chain in order.** When one finding enables another, the enabler goes first. Closing a hardcoded secret while an unauthenticated file read still exposes `.env` fixes nothing.
