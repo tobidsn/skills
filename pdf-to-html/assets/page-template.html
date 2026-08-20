@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="LANG">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TITLE</title>
+<style>
+/* ============================================================
+   Starting point for a paged, pixel-faithful PDF transcription.
+   Every number marked MEASURED comes from probe.py / measure.py.
+   Replace them; do not guess them.
+   ============================================================ */
+:root{
+  --ink:#333333;          /* MEASURED: measure.py colors over a text block */
+  --accent:#0000FF;       /* MEASURED: colour of the section bars */
+  --rule:#000000;         /* MEASURED: box border colour */
+  --hl:#FFFF00;
+
+  --fs:10pt;              /* MEASURED: probe.py report.md, the body row */
+
+  /* Leading in ABSOLUTE units, not em. Two reasons: it is what you actually
+     measured (successive text-line tops in geometry.txt), and it stays put if
+     you ever nudge --fs, so the vertical rhythm cannot drift out from under
+     you a page at a time. */
+  --lh:11.5pt;            /* MEASURED: geometry.txt, top(n+1) - top(n) */
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+html{background:#5c6570}                       /* desk around the page */
+body{
+  /* The real font, at the real size. This is the single biggest lever on
+     fidelity: with the same font and the same column width, the browser breaks
+     lines where the source did, and every paragraph below stays in sync. */
+  font-family:"FONT NAME", sans-serif;
+  padding:10mm 0;
+  -webkit-font-smoothing:antialiased;
+}
+
+.page{
+  position:relative;
+  width:210mm;height:297mm;                    /* MEASURED: probe.py page size */
+  margin:0 auto 10mm;
+  background:#fff;
+  overflow:hidden;                             /* nothing bleeds between pages */
+  color:var(--ink);
+  font-size:var(--fs);
+  line-height:var(--lh);
+  box-shadow:0 3px 16px rgba(0,0,0,.4);
+}
+
+/* ---------- primitives, all absolutely placed in mm ---------- */
+.abs{position:absolute}
+
+.band{                                         /* filled section heading bar */
+  position:absolute;
+  background:var(--accent);color:#fff;
+  font-weight:bold;
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;border-radius:1.4mm;
+  padding:0 3mm;
+}
+
+.box{                                          /* ruled content box */
+  position:absolute;
+  border:.55pt solid var(--rule);
+  /* Vertical padding 0 is usually right: a Word text frame puts its first
+     baseline within a few tenths of a mm of the border, and 1mm of padding
+     here pushes every line on the page down by a visible amount. Confirm
+     against geometry.txt: first line top minus box top. */
+  padding:0 1.9mm;
+}
+
+/* ---------- justified body text ---------- */
+.j,.r>.t{text-align:justify;text-justify:inter-word}
+
+/* ---------- hanging indents ----------
+   Numbered lists carry their own markers, positioned on a tab ladder. A flex
+   row with a fixed-width marker reproduces that exactly and keeps the wrapped
+   lines aligned under the text, not under the number. Derive both numbers from
+   geometry.txt: margin-left = marker x - box text origin, and the marker width
+   = text x - marker x.
+
+   Give each ladder level a class rather than inline styles, so a level that
+   turns out wrong is one edit instead of forty. */
+.r{display:flex;align-items:flex-start}
+.r>.m{flex:0 0 auto;white-space:nowrap}
+.r>.t{flex:1 1 auto;min-width:0}
+
+.l1{margin-left:0}          .l1>.m{width:5.4mm}    /* MEASURED */
+.l2{margin-left:6.3mm}      .l2>.m{width:6.3mm}    /* MEASURED */
+.l3{margin-left:12.9mm}     .l3>.m{width:10.1mm}   /* MEASURED */
+
+.sp{height:var(--lh)}                          /* one blank line */
+.b{font-weight:bold}
+.i{font-style:italic}
+.hl{background:var(--hl)}
+
+/* ---------- tables ---------- */
+table.t{border-collapse:collapse;position:absolute;font-size:var(--fs);table-layout:fixed}
+table.t td,table.t th{
+  border:.55pt solid var(--rule);
+  padding:.25mm 1.9mm;
+  line-height:3.55mm;                          /* MEASURED: row pitch minus padding */
+  height:4.27mm;                               /* MEASURED: rule-to-rule pitch */
+  font-weight:normal;vertical-align:top;
+}
+table.t th{text-align:center;font-weight:bold}
+/* An inline background box is as tall as the font ascent+descent regardless of
+   line-height, so a bare <span class="hl"> inside a tight row paints over the
+   collapsed row rule and silently erases it. Box it to an explicit height. */
+table.t .hl{display:inline-block;height:3.30mm;line-height:3.30mm;vertical-align:top}
+
+/* ---------- artwork ----------
+   Set BOTH width and height from assets/manifest.tsv. If ar_skew says
+   STRETCHED the source scales the raster non-uniformly, and deriving one
+   dimension from the other will distort it. */
+.art{position:absolute}
+
+/* ---------- print ----------
+   Zero page margin plus a page-sized .page means Cmd-P reproduces the original
+   sheet for sheet. */
+@page{size:A4;margin:0}
+@media print{
+  html{background:#fff}
+  body{padding:0}
+  .page{margin:0;box-shadow:none;break-after:page;page-break-after:always}
+  .page:last-child{break-after:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1 ==================== -->
+<section class="page" id="p1">
+  <img class="art" style="left:0;top:0;width:210mm;height:50mm" src="assets/header.png" alt="">
+
+  <div class="band" style="left:9.9mm;top:64.9mm;width:190.1mm;height:9.2mm">SECTION TITLE</div>
+
+  <div class="box" style="left:9.9mm;top:80.0mm;width:190.1mm;height:60.0mm">
+    <div class="r l1"><span class="m">1.</span><span class="t">First item.</span></div>
+    <div class="r l2"><span class="m">1.1.</span><span class="t">Nested item.</span></div>
+    <div class="sp"></div>
+    <div class="j">A plain justified paragraph.</div>
+  </div>
+
+  <img class="art" style="left:0;top:273.1mm;width:210mm;height:24mm" src="assets/footer.png" alt="">
+</section>
+
+</body>
+</html>
