@@ -44,7 +44,7 @@ Domain-agnostic, spec-driven skills that take a task from idea → plan → buil
 | `project-issue` | Issue triage for the current project — repo auto-discovered from `.git/config`, supports GitHub (`gh`) and GitLab (`glab`). `list` open issues or deep-review one into a triage verdict |
 | `call-graph` | Answer flow questions with a verified plain-text graph — root → what it reaches, every node backed by an openable `path:line`. Language-agnostic code tracing, plus interface flows, agent orchestration, and pipeline/approval processes |
 | `promo-card` | Landscape PNG announcement card for a skill, feature, or release — self-contained HTML rendered to an exact pixel size through headless Chrome, verified in the DOM before the screenshot is taken |
-| `security-audit` | Three phases — **audit** (one ranked `path:line` table, max 10 rows, plus a `Not scanned:` line), then **plan** at `<project>/docs/security-audit/<date>-<slug>-plan.md` covering CRIT/HIGH only, then **build** (one finding = one edit, each verified by a real command). Scans every ecosystem it detects, so a Laravel + Vite app gets `composer audit` *and* the Node-family audit; Go gets `govulncheck` via `go run`, no install. Fix patterns split per language, loaded only for manifests present, plus a rate-limit reference (recommended limits and how to key them, the four controls an OTP flow needs, bot filtering chosen by client type — Turnstile for web, Play Integrity/App Attest for apps). `audit auto` skips the plan confirmation; code changes always wait for explicit approval |
+| `security-audit` | Three phases — **audit** (one ranked `path:line` table plus a `Not scanned:` line; every CRIT/HIGH always gets a row, MED/LOW fill to ~10 with the tail collapsed), then **plan** at `<project>/docs/security-audit/<date>-<slug>-plan.md` covering CRIT/HIGH only, then **build** (one finding = one edit, each verified by a real command). Scans every ecosystem it detects, so a Laravel + Vite app gets `composer audit` *and* the Node-family audit; Go gets `govulncheck` via `go run`, no install. Fix patterns split per language, loaded only for manifests present, plus a rate-limit reference (recommended limits and how to key them, the four controls an OTP flow needs, bot filtering chosen by client type — Turnstile for web, Play Integrity/App Attest for apps). `audit auto` skips the plan confirmation; code changes always wait for explicit approval |
 | `skill-creator` | Framework for creating, evaluating, and packaging new skills |
 | `agent-memory` | Persistent cross-conversation memory storage |
 | `find-skills` | Discover and install skills from the public ecosystem |
@@ -129,6 +129,7 @@ Once installed, skills activate automatically when you work on relevant tasks in
 - Asking to document an API → `ant-dedoc-scramble` activates
 - Asking to "mindmap this YouTube video" or "make a mindmap of these notes" → `mindmap-architect` activates
 - Asking "how does the login flow work" or "what calls this function" → `call-graph` activates
+- Asking to audit security, scan dependencies for CVEs, or harden a service before handover → `security-audit` activates
 
 The `ant-laravel-specialist` orchestrator skill will route your request to the right focused skill based on context.
 
@@ -166,6 +167,48 @@ Every node comes with a `src:` block giving its `path:line`, so any hop can be s
 **Four materials.** Code is the default and works on any language. The same notation covers interface flows (surfaces and the moves between them, with empty/loading/partial/error/denied states per surface), agent or task orchestration (waves, gates, data dependencies), and process flows (CI/CD, data pipelines, approval chains). When nothing openable exists yet — a flow you've only described — the graph is labeled `[proposed]` and drops the `src:` block rather than citing sources that don't exist.
 
 **Pinning the format.** To make every future answer in a project use this shape, ask it to add the convention to your `AGENTS.md` or `CLAUDE.md`; it appends a short rule rather than rewriting the file.
+
+### Using `security-audit`
+
+Three phases — **audit → plan → build** — and every one of them waits for you:
+
+```
+/security-audit             # audit the working diff
+/security-audit <path>      # audit a specific path
+/security-audit auto        # audit and write the plan in one pass
+```
+
+It runs every ecosystem it detects, so a Laravel app with a Vite frontend gets `composer audit` **and** the Node-family audit merged into a single table. The exact command comes from the committed lockfile — npm, pnpm, yarn, or bun — rather than being assumed from `package.json`. Go runs `govulncheck` through `go run`, which leaves no binary on your `$PATH` and needs no permission to install anything.
+
+Alongside dependencies it covers nine code classes: SQL and command injection, XSS, path traversal, weak crypto and RNG, disabled TLS, unbounded OTP verify attempts, unthrottled public writes, and race conditions.
+
+Phase one is one table and nothing else:
+
+```
+| Sev | Finding | Location | Fix |
+|---|---|---|---|
+| CRIT | SQL concat | app/Repositories/UserRepo.php:88 | bind param |
+| HIGH | shell interpolation | cmd/deploy/main.go:41 | exec.Command args |
+
+2 critical/high reachable — blocker.
+Not scanned: composer audit unavailable (Composer 2.3).
+```
+
+Ranked, with each row carrying a `path:line` you can open. Every CRIT and HIGH finding gets a row no matter how many there are; MED and LOW fill the table to roughly ten and the rest collapse to `+N more (MED/LOW)`. The cap keeps the tail readable — it is never something a blocker falls off the end of, since the verdict number is a literal count of the CRIT/HIGH rows above it. The `Not scanned:` line names what couldn't be checked, because silence would read as "clean" and a scan that never ran is not a clean scan.
+
+**A grep hit is the entry point, not the verdict.** Findings are traced back to where the input enters the system, so a value that already passed a strict parser lands as MED rather than CRIT. Dependency advisories are ranked by whether the vulnerable function is actually reachable rather than by how many there are — an unreachable critical is a MED row. And a correct primitive name is never proof of a correct configuration: hitting `Hash::make` or `bcrypt.` sends it into the wrapper to read the real parameters, because a helper named `Bcrypt` calling `GenerateFromPassword(pw, bcrypt.MinCost)` passes every grep above and is still a genuine finding.
+
+**Nothing is edited without approval.** Phase one never touches code — no `npm audit fix --force`, no quiet dependency bumps. `auto` skips exactly one question, the "do you want a plan?" one; the gate before the first code edit holds in every mode, because a plan is a Markdown file you can delete while a fix can break callers or lock users out. When there are no CRIT or HIGH findings it doesn't offer a plan at all — the table is the whole answer.
+
+The plan lands at `<project>/docs/security-audit/<date>-<slug>-plan.md`, in the project being audited, with the findings table embedded so the Goals keep their evidence. Goals cover CRIT and HIGH only; MED and LOW stay visible in the table and are named as out of scope.
+
+**A report for the other reader.** A plan is a work order — Goals, `path:line`, verification commands — which is the wrong document for a client or a delivery lead deciding whether to ship. `/security-audit report` renders the same findings as a self-contained HTML assessment report: vendor-style cover with classification marking, an executive summary, a risk profile whose severity encoding survives greyscale printing, one block per finding with business impact and remediation, and a prominent **Not assessed** section — because "we ran a security audit" is heard as "everything was checked".
+
+```
+/security-audit report      # manual only — no phase ever triggers it
+```
+
+It opens in any browser with no network and prints to PDF with page breaks, repeated table headers, and a `CONFIDENTIAL` footer already handled. Deliberately it carries **no CVSS scores and no proof-of-concept sections**: this is a source and configuration review, it runs no exploits, and a score it didn't compute would be a fabricated figure in a standard's notation. The report says so on the cover rather than leaving the reader to assume otherwise.
 
 ## Antikode Architecture Principles
 

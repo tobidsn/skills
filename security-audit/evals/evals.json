@@ -6,7 +6,7 @@
       "id": 0,
       "name": "full-audit-go-repo",
       "prompt": "audit the security of $TARGET_REPO, it's a fiber api we're about to hand over to the client. tell me if there's anything that blocks the release",
-      "expected_output": "One ranked table, max 10 rows, each row with an openable path:line, plus a single verdict line and a `Not scanned:` line if anything could not be checked. Must surface the two release blockers: a hardcoded signing-secret fallback in the JWT layer (present in both the config default and the Go accessor), and an unauthenticated route group serving a log viewer whose file parameter reaches the filesystem unvalidated. Should load only references/go.md, not php.md or typescript.md. No prose essay, no STRIDE section, no edits to the repo.",
+      "expected_output": "One ranked table with every CRIT/HIGH finding present as its own row (MED/LOW fill to roughly ten, tail collapsed to `+N more`), each row with an openable path:line, plus a single verdict line whose number equals the count of CRIT/HIGH rows in the table and a `Not scanned:` line if anything could not be checked. Must surface the two release blockers: a hardcoded signing-secret fallback in the JWT layer (present in both the config default and the Go accessor), and an unauthenticated route group serving a log viewer whose file parameter reaches the filesystem unvalidated. Should load only references/go.md, not php.md or typescript.md. No prose essay, no STRIDE section, no edits to the repo.",
       "files": []
     },
     {

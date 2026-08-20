@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{REPORT_TITLE}} — {{CLIENT_NAME}}</title>
+<style>
+/* ==========================================================================
+   SECURITY ASSESSMENT REPORT — TEMPLATE
+   Self-contained. No webfonts, no external images, no required JS.
+   Tokens to substitute are written as {{TOKEN}}.
+   ========================================================================== */
+
+:root{
+  --fg:#000000;
+  --fg-900:#171717;
+  --fg-700:#666666;
+  --fg-500:#8e8e8e;
+  --bg:#ffffff;
+  --bg-subtle:#fafafa;
+  --border:#eaeaea;
+  --border-strong:#cacaca;
+  --rule:#171717;
+
+  --sev-critical:#c50000;
+  --sev-high:#b45309;
+  --sev-medium:#666666;
+  --sev-low:#8e8e8e;
+  --sev-info:#a1a1a1;
+  --state-fixed:#0a7d33;
+  --link:#0070f3;
+
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,"Helvetica Neue",sans-serif;
+  --mono:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg-subtle);
+  color:var(--fg-900);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.6;
+  font-variant-numeric:tabular-nums;
+  text-wrap:pretty;
+}
+a{color:var(--link);text-decoration:none}
+a:hover{color:#0761d1;text-decoration:underline}
+
+.doc{
+  max-width:920px;
+  margin:0 auto;
+  background:var(--bg);
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
+}
+.sheet{padding:64px 72px}
+.sheet + .sheet{border-top:1px solid var(--border)}
+
+/* ---------- type ---------- */
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-0.02em;color:var(--fg)}
+h1{font-size:32px;line-height:1.2;letter-spacing:-0.035em}
+h2{font-size:20px;line-height:1.3}
+h3{font-size:15px;line-height:1.4;letter-spacing:-0.01em}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+.lede{font-size:16px;line-height:1.65;color:var(--fg-900)}
+.meta{font-size:12px;line-height:1.5;color:var(--fg-700)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--fg-700);
+}
+.tok{font-family:var(--mono);font-size:0.94em;color:var(--fg-900)}
+.empty{font-family:var(--mono);font-size:12px;color:var(--fg-500);font-style:normal}
+
+/* ---------- section headers ---------- */
+.section-head{
+  display:flex;
+  align-items:baseline;
+  gap:16px;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--rule);
+  margin-bottom:28px;
+}
+.section-num{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--fg-700);
+  min-width:22px;
+}
+.section-head h2{flex:1}
+.section-head .meta{white-space:nowrap}
+
+/* ---------- cover ---------- */
+.cover{padding:72px}
+.cover-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:24px;
+  padding-bottom:20px;
+  border-bottom:2px solid var(--fg);
+}
+.vendor{font-size:15px;font-weight:600;letter-spacing:-0.02em;color:var(--fg)}
+.vendor span{display:block;font-weight:400;font-size:12px;color:var(--fg-700);letter-spacing:0}
+.classification{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:0.14em;
+  padding:5px 10px;
+  border:1px solid var(--fg);
+  color:var(--fg);
+  white-space:nowrap;
+}
+.cover-title{margin:88px 0 0}
+.cover-title h1{font-size:40px;letter-spacing:-0.04em}
+.cover-title .client{
+  margin-top:14px;
+  font-size:20px;
+  color:var(--fg-900);
+  letter-spacing:-0.02em;
+}
+.cover-scope{
+  margin-top:20px;
+  max-width:640px;
+  color:var(--fg-700);
+  font-size:14px;
+}
+.cover-facts{
+  margin-top:96px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  border-top:1px solid var(--border);
+}
+.cover-facts div{
+  padding:14px 16px 14px 0;
+  border-right:1px solid var(--border);
+}
+.cover-facts div:last-child{border-right:0}
+.cover-facts dt{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--fg-500);
+}
+.cover-facts dd{margin:5px 0 0;font-size:13px;color:var(--fg-900)}
+.cover-parties{
+  margin-top:40px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  border:1px solid var(--border);
+}
+.cover-parties > div{padding:18px 20px}
+.cover-parties > div:first-child{border-right:1px solid var(--border)}
+.cover-note{
+  margin-top:32px;
+  font-size:11px;
+  line-height:1.55;
+  color:var(--fg-700);
+  border-top:1px solid var(--border);
+  padding-top:14px;
+}
+
+/* ---------- sample marker ---------- */
+.sample-banner{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  border:1px solid var(--fg);
+  background:repeating-linear-gradient(135deg,#fff,#fff 6px,#fafafa 6px,#fafafa 12px);
+  padding:12px 16px;
+  font-size:12px;
+  line-height:1.55;
+}
+.sample-banner strong{font-family:var(--mono);font-size:11px;letter-spacing:0.1em}
+.sample-tag{
+  display:inline-block;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.1em;
+  padding:2px 6px;
+  border:1px dashed var(--fg-500);
+  color:var(--fg-700);
+  vertical-align:2px;
+}
+
+/* ---------- contents ---------- */
+.toc{list-style:none;margin:0;padding:0;border-top:1px solid var(--border)}
+.toc li{border-bottom:1px solid var(--border)}
+.toc a{
+  display:grid;
+  grid-template-columns:44px minmax(0,240px) minmax(0,1fr);
+  gap:16px;
+  align-items:baseline;
+  padding:13px 0;
+  color:var(--fg-900);
+  text-decoration:none;
+}
+.toc a:hover{color:var(--fg);text-decoration:none}
+.toc a:hover .toc-title{text-decoration:underline}
+.toc-num{font-family:var(--mono);font-size:12px;color:var(--fg-700)}
+.toc-title{font-size:15px;font-weight:600;letter-spacing:-0.015em;color:var(--fg)}
+.toc-desc{font-size:12.5px;color:var(--fg-700)}
+.toc-sub .toc-title{font-weight:400;font-size:14px}
+.toc-sub a{padding-left:0}
+.toc-sub .toc-num{color:var(--fg-500)}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px}
+caption{text-align:left;font-size:12px;color:var(--fg-700);padding-bottom:8px}
+th{
+  text-align:left;
+  font-family:var(--mono);
+  font-weight:400;
+  font-size:10px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--fg-700);
+  padding:8px 12px 8px 0;
+  border-bottom:1px solid var(--rule);
+  vertical-align:bottom;
+}
+td{
+  padding:10px 12px 10px 0;
+  border-bottom:1px solid var(--border);
+  vertical-align:top;
+}
+td:last-child,th:last-child{padding-right:0}
+tbody tr:last-child td{border-bottom:1px solid var(--border-strong)}
+.num{text-align:right;font-family:var(--mono);padding-right:0}
+.t-compact td,.t-compact th{padding-top:7px;padding-bottom:7px;font-size:12px}
+
+/* ---------- badges ---------- */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:0.1em;
+  padding:3px 8px;
+  white-space:nowrap;
+  border:1px solid var(--border-strong);
+  color:var(--fg-900);
+  background:#fff;
+}
+.pips{display:inline-flex;gap:2px}
+.pips i{width:4px;height:9px;display:block;border:1px solid currentColor}
+.pips i.on{background:currentColor}
+
+.sev-critical{background:var(--sev-critical);border-color:var(--sev-critical);color:#fff;font-weight:700}
+.sev-high{border:2px solid var(--sev-high);color:var(--sev-high);font-weight:700;padding:2px 7px}
+.sev-medium{border:1px solid var(--fg-900);color:var(--fg-900);font-weight:600}
+.sev-low{border:1px solid var(--border-strong);color:var(--fg-700)}
+.sev-informational{border:1px dashed var(--border-strong);color:var(--fg-500)}
+
+.st-open{background:var(--fg);border-color:var(--fg);color:#fff}
+.st-fixed{border-color:var(--state-fixed);color:var(--state-fixed)}
+.st-accepted{border-color:var(--border-strong);color:var(--fg-700)}
+.st-deferred{border-style:dashed;border-color:var(--fg-700);color:var(--fg-700)}
+
+/* ---------- verdict ---------- */
+.verdict{
+  border:1px solid var(--fg);
+  border-left:6px solid var(--fg);
+  padding:20px 24px;
+  margin:0 0 28px;
+}
+.verdict .eyebrow{margin-bottom:6px}
+.verdict-value{font-size:22px;font-weight:600;letter-spacing:-0.025em;color:var(--fg)}
+.verdict-qual{margin-top:8px;font-size:13px;color:var(--fg-900)}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  border:1px solid var(--border);
+  margin:24px 0;
+}
+.kpi{padding:14px 16px;border-right:1px solid var(--border);min-width:0;overflow-wrap:anywhere}
+.kpi:last-child{border-right:0}
+.kpi b{display:block;min-width:0;overflow-wrap:anywhere;font-family:var(--mono);font-size:24px;font-weight:600;color:var(--fg);line-height:1.1}
+.kpi span{display:block;margin-top:6px;font-family:var(--mono);font-size:9.5px;letter-spacing:0.09em;text-transform:uppercase;color:var(--fg-700)}
+
+.callout{
+  border:1px solid var(--border-strong);
+  background:var(--bg-subtle);
+  padding:18px 20px;
+}
+.callout h3{margin-bottom:8px}
+
+/* ---------- risk profile ---------- */
+.chart{
+  border:1px solid var(--border);
+  padding:24px 24px 18px;
+  margin-bottom:24px;
+}
+.chart-title{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:18px}
+.chart svg{display:block;width:100%;height:auto}
+.legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 20px;
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid var(--border);
+  font-size:11px;
+  color:var(--fg-700);
+}
+.legend span{display:flex;align-items:center;gap:7px}
+.swatch{width:22px;height:10px;border:1px solid var(--fg-900);display:block}
+
+/* ---------- not assessed ---------- */
+.not-assessed{
+  border:2px solid var(--fg);
+  padding:24px 26px;
+  margin-top:32px;
+}
+.not-assessed .eyebrow{color:var(--fg)}
+.not-assessed h3{font-size:17px;margin:6px 0 10px}
+.na-list{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--border)}
+.na-list li{
+  display:grid;
+  grid-template-columns:200px 1fr;
+  gap:20px;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+  font-size:13px;
+}
+.na-list li b{font-weight:600;color:var(--fg)}
+
+/* ---------- findings ---------- */
+.finding{
+  border:1px solid var(--border-strong);
+  margin-bottom:28px;
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.finding-head{
+  padding:16px 22px;
+  border-bottom:1px solid var(--rule);
+  background:var(--bg-subtle);
+}
+.finding-idline{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:8px;
+}
+.finding-id{font-family:var(--mono);font-size:12px;color:var(--fg-900);letter-spacing:0.04em}
+.finding-head h3{font-size:17px;letter-spacing:-0.02em}
+.finding-attrs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  border-bottom:1px solid var(--border);
+}
+.finding-attrs > div{padding:12px 22px;border-right:1px solid var(--border)}
+.finding-attrs > div:last-child{border-right:0}
+.finding-attrs dt{
+  font-family:var(--mono);
+  font-size:9.5px;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--fg-500);
+}
+.finding-attrs dd{margin:5px 0 0;font-size:13px}
+.finding-body{padding:4px 22px 20px}
+.field{padding:16px 0;border-bottom:1px solid var(--border)}
+.field:last-child{border-bottom:0;padding-bottom:0}
+.field > .eyebrow{display:block;margin-bottom:7px}
+.field p{font-size:13.5px}
+.evidence{
+  font-family:var(--mono);
+  font-size:12px;
+  line-height:1.7;
+  background:var(--bg-subtle);
+  border:1px solid var(--border);
+  border-left:3px solid var(--fg-900);
+  padding:12px 14px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.refs{display:flex;flex-wrap:wrap;gap:8px}
+.ref{
+  font-family:var(--mono);
+  font-size:11px;
+  padding:3px 8px;
+  border:1px solid var(--border-strong);
+  color:var(--fg-900);
+}
+.field-note{font-size:11.5px;color:var(--fg-500);margin-top:8px}
+
+/* ---------- roadmap ---------- */
+.effort{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px}
+.effort .pips i{height:8px}
+
+/* ---------- appendix ---------- */
+.glossary{margin:0;border-top:1px solid var(--border)}
+.glossary > div{
+  display:grid;
+  grid-template-columns:160px 1fr;
+  gap:20px;
+  padding:12px 0;
+  border-bottom:1px solid var(--border);
+  font-size:13px;
+}
+.doc-footer{
+  padding:28px 72px 48px;
+  border-top:1px solid var(--rule);
+  display:flex;
+  justify-content:space-between;
+  gap:24px;
+  font-size:11px;
+  color:var(--fg-700);
+}
+
+/* ---------- print ---------- */
+@media print{
+  @page{
+    margin:16mm 14mm 18mm;
+    @bottom-center{content:counter(page) " / " counter(pages);font-size:8pt;color:#666}
+  }
+  html,body{background:#fff}
+  body{font-size:10.5pt;line-height:1.5}
+  .doc{max-width:none;border:0;margin:0}
+  .sheet{padding:0 0 10mm}
+  .sheet + .sheet{border-top:0;padding-top:6mm}
+  .cover{padding:0 0 10mm;page-break-after:always}
+  .contents{page-break-after:always}
+  .toc a{color:#000}
+  .toc a::after{content:none}
+  .cover-title{margin-top:26mm}
+  .cover-facts{margin-top:30mm}
+  h1{font-size:26pt}
+  h2{font-size:14pt}
+  h3{font-size:11.5pt}
+  .section-head{page-break-after:avoid;break-after:avoid}
+  .finding,.na-list li,.chart,.verdict,.not-assessed,.glossary > div,tr{
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  thead{display:table-header-group}
+  .finding-head{background:#fff}
+  .evidence{background:#fff}
+  .sample-banner{background:#fff}
+  .kpi b{font-size:14pt}
+  .print-footer{
+    display:flex !important;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    justify-content:space-between;
+    font-family:var(--mono);
+    font-size:8pt;
+    color:#666;
+    border-top:.5pt solid #cacaca;
+    padding-top:3pt;
+  }
+  .doc-footer{padding:6mm 0 0}
+  a{color:#000;text-decoration:none}
+  a::after{content:" (" attr(href) ")";font-size:8pt;color:#666}
+  .no-print{display:none !important}
+  td a::after,.toc a::after{content:none}
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+.print-footer{display:none}
+
+@media (max-width:760px){
+  .sheet,.cover{padding:32px 24px}
+  .cover-facts,.kpis,.finding-attrs{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .cover-parties{grid-template-columns:1fr}
+  .cover-parties > div:first-child{border-right:0;border-bottom:1px solid var(--border)}
+  .na-list li,.glossary > div{grid-template-columns:1fr;gap:4px}
+}
+</style>
+</head>
+<body>
+
+<div class="print-footer" aria-hidden="true">
+  <span>{{REPORT_TITLE}} — {{CLIENT_NAME}}</span>
+  <span>CONFIDENTIAL · {{REPORT_DATE}} · v{{DOC_VERSION}}</span>
+</div>
+
+<div class="doc">
+
+<!-- ============================================================ COVER -->
+<section class="cover">
+  <div class="cover-top">
+    <div class="vendor">{{VENDOR_NAME}}<span>Security Assessment Practice</span></div>
+    <div class="classification">CONFIDENTIAL</div>
+  </div>
+
+  <div class="cover-title">
+    <h1>{{REPORT_TITLE}}</h1>
+    <div class="client">{{CLIENT_NAME}} — {{PROJECT_NAME}}</div>
+    <p class="cover-scope"><strong>Scope.</strong> {{SCOPE_ONE_LINE}}</p>
+  </div>
+
+  <dl class="cover-facts">
+    <div><dt>Report date</dt><dd class="mono">{{REPORT_DATE}}</dd></div>
+    <div><dt>Document version</dt><dd class="mono">{{DOC_VERSION}}</dd></div>
+    <div><dt>Assessment window</dt><dd class="mono">{{ASSESSMENT_START}} — {{ASSESSMENT_END}}</dd></div>
+    <div><dt>Reference</dt><dd class="mono">{{ENGAGEMENT_REF}}</dd></div>
+  </dl>
+
+  <div class="cover-parties">
+    <div>
+      <div class="eyebrow">Prepared for</div>
+      <p class="meta" style="margin-top:8px">
+        {{CLIENT_NAME}}<br>
+        {{CLIENT_CONTACT_NAME}}, {{CLIENT_CONTACT_ROLE}}<br>
+        {{CLIENT_CONTACT_EMAIL}}
+      </p>
+    </div>
+    <div>
+      <div class="eyebrow">Prepared by</div>
+      <p class="meta" style="margin-top:8px">
+        {{VENDOR_NAME}}<br>
+        {{AUTHOR_NAME}}, {{AUTHOR_ROLE}}<br>
+        {{AUTHOR_EMAIL}}
+      </p>
+    </div>
+  </div>
+
+  <p class="cover-note">
+    This assessment is a source-code and configuration review. No exploitation was
+    attempted and no CVSS scores were computed; severity is assigned by reviewer
+    judgement against the definitions in Appendix B. Findings describe what was
+    observed in the assessed material — see section 4.1, <em>Not assessed</em>, for the
+    limits of this review. Distribution is restricted to the parties named in
+    section 1.
+  </p>
+</section>
+
+<!-- ========================================================= CONTENTS -->
+<section class="sheet contents" id="contents">
+  <div class="section-head">
+    <span class="section-num">—</span>
+    <h2>Contents</h2>
+    <span class="meta mono">{{DOC_VERSION}}</span>
+  </div>
+
+  <ol class="toc">
+    <li><a href="#s1"><span class="toc-num">1</span><span class="toc-title">Document control</span><span class="toc-desc">Version history, distribution list</span></a></li>
+    <li><a href="#s2"><span class="toc-num">2</span><span class="toc-title">Executive summary</span><span class="toc-desc">Verdict, headline counts, first action</span></a></li>
+    <li><a href="#s3"><span class="toc-num">3</span><span class="toc-title">Risk profile</span><span class="toc-desc">Findings by severity and status</span></a></li>
+    <li><a href="#s4"><span class="toc-num">4</span><span class="toc-title">Scope and methodology</span><span class="toc-desc">What was assessed, and how</span></a></li>
+    <li class="toc-sub"><a href="#s4-1"><span class="toc-num">4.1</span><span class="toc-title">Not assessed</span><span class="toc-desc">Limits of this review — read before quoting the result</span></a></li>
+    <li><a href="#s5"><span class="toc-num">5</span><span class="toc-title">Findings</span><span class="toc-desc">Summary index, then one block per finding</span></a></li>
+    <li><a href="#s6"><span class="toc-num">6</span><span class="toc-title">Remediation roadmap</span><span class="toc-desc">Priority order with effort estimates</span></a></li>
+    <li><a href="#s7"><span class="toc-num">7</span><span class="toc-title">Appendix</span><span class="toc-desc">Tools, severity and status definitions, exclusions</span></a></li>
+  </ol>
+
+  <p class="meta" style="margin-top:28px">
+    This report is issued as a single document. Page numbers are applied by the
+    exporting application at print time.
+  </p>
+</section>
+
+<!-- ================================================== 1. DOCUMENT CONTROL -->
+<section class="sheet" id="s1">
+  <div class="section-head">
+    <span class="section-num">1</span>
+    <h2>Document control</h2>
+    <span class="meta mono">{{ENGAGEMENT_REF}}</span>
+  </div>
+
+  <table class="t-compact">
+    <caption>Revision history</caption>
+    <thead>
+      <tr><th style="width:70px">Version</th><th style="width:110px">Date</th><th>Author</th><th>Reviewer</th><th>Change</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono">{{DOC_VERSION}}</td>
+        <td class="mono">{{REPORT_DATE}}</td>
+        <td>{{AUTHOR_NAME}}</td>
+        <td>{{REVIEWER_NAME}}</td>
+        <td>{{REVISION_NOTE}}</td>
+      </tr>
+      <!-- repeat one <tr> per revision -->
+    </tbody>
+  </table>
+
+  <table class="t-compact" style="margin-top:32px">
+    <caption>Distribution list</caption>
+    <thead>
+      <tr><th>Name</th><th>Organisation</th><th>Role</th><th>Classification acknowledged</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{DIST_1_NAME}}</td><td>{{DIST_1_ORG}}</td><td>{{DIST_1_ROLE}}</td>
+        <td class="mono">{{DIST_1_ACK}}</td>
+      </tr>
+      <tr>
+        <td>{{DIST_2_NAME}}</td><td>{{DIST_2_ORG}}</td><td>{{DIST_2_ROLE}}</td>
+        <td class="mono">{{DIST_2_ACK}}</td>
+      </tr>
+      <!-- repeat one <tr> per recipient; if none, keep a single row reading "Not established" -->
+    </tbody>
+  </table>
+
+  <p class="meta" style="margin-top:20px">
+    Review status: {{REVIEW_STATUS}} · Approved by: {{APPROVER_NAME}} · Retention: {{RETENTION_POLICY}}
+  </p>
+</section>
+
+<!-- ================================================ 2. EXECUTIVE SUMMARY -->
+<section class="sheet" id="s2">
+  <div class="section-head">
+    <span class="section-num">2</span>
+    <h2>Executive summary</h2>
+    <span class="meta">Written for a non-technical reader</span>
+  </div>
+
+  <div class="verdict">
+    <div class="eyebrow">Overall verdict</div>
+    <div class="verdict-value">{{VERDICT}}</div>
+    <div class="verdict-qual">{{VERDICT_QUALIFIER}}</div>
+  </div>
+
+  <p class="lede">{{EXEC_WHAT_WAS_ASSESSED}}</p>
+  <p class="lede">{{EXEC_WHAT_WE_FOUND}}</p>
+
+  <div class="kpis">
+    <div class="kpi"><b>{{COUNT_CRITICAL}}</b><span>Critical</span></div>
+    <div class="kpi"><b>{{COUNT_HIGH}}</b><span>High</span></div>
+    <div class="kpi"><b>{{COUNT_MEDIUM}}</b><span>Medium</span></div>
+    <div class="kpi"><b>{{COUNT_LOW}}</b><span>Low</span></div>
+    <div class="kpi"><b>{{COUNT_INFO}}</b><span>Informational</span></div>
+  </div>
+
+  <div class="callout">
+    <h3>The one thing to act on first</h3>
+    <p style="margin-bottom:10px">{{TOP_ACTION}}</p>
+    <p class="meta">
+      Related finding: <a href="#{{TOP_ACTION_FINDING_ID}}" class="tok">{{TOP_ACTION_FINDING_ID}}</a> ·
+      Owner: {{TOP_ACTION_OWNER}} ·
+      Suggested by: {{TOP_ACTION_DATE}}
+    </p>
+  </div>
+
+  <p class="meta" style="margin-top:24px">
+    Terms used in this report — Critical, High, Medium, Low, Informational — are
+    defined in Appendix B. They are reviewer judgements, not calculated scores.
+  </p>
+</section>
+
+<!-- ==================================================== 3. RISK PROFILE -->
+<section class="sheet" id="s3">
+  <div class="section-head">
+    <span class="section-num">3</span>
+    <h2>Risk profile</h2>
+    <span class="meta mono">{{COUNT_TOTAL}} findings</span>
+  </div>
+
+  <p class="sample-banner" style="margin-bottom:24px">
+    <strong>SAMPLE&nbsp;DATA</strong>
+    <span>The chart and table below are filled with illustrative numbers so the
+    layout can be seen working. Substitute <span class="tok">{{COUNT_*}}</span> for the
+    figures and <span class="tok">{{PCT_*}}</span> (0–100, share of total) for the
+    bar widths and donut segments.</span>
+  </p>
+
+  <div class="chart">
+    <div class="chart-title">
+      <h3>Findings by severity</h3>
+      <span class="meta mono">n = 14</span>
+    </div>
+
+    <!-- Horizontal bars. Substitute width="{{PCT_X}}%" and the count labels.
+         Fills are hatch patterns so severity survives greyscale printing. -->
+    <svg viewBox="0 0 700 190" role="img" aria-label="Findings by severity: 1 critical, 3 high, 5 medium, 3 low, 2 informational.">
+      <defs>
+        <pattern id="hatch-high" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="6" height="6" fill="#ffffff"></rect>
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#b45309" stroke-width="3"></line>
+        </pattern>
+        <pattern id="hatch-medium" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="7" height="7" fill="#ffffff"></rect>
+          <line x1="0" y1="0" x2="0" y2="7" stroke="#171717" stroke-width="1.5"></line>
+        </pattern>
+        <pattern id="hatch-low" width="4" height="4" patternUnits="userSpaceOnUse">
+          <rect width="4" height="4" fill="#ffffff"></rect>
+          <circle cx="1" cy="1" r="0.9" fill="#8e8e8e"></circle>
+        </pattern>
+      </defs>
+
+      <!-- CRITICAL -->
+      <text x="0" y="18" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="11" letter-spacing="1" fill="#171717">CRITICAL</text>
+      <rect x="96" y="6" width="484" height="16" fill="#fafafa" stroke="#eaeaea"></rect>
+      <rect x="96" y="6" width="34.6" height="16" fill="#c50000"></rect>
+      <text x="700" y="18" text-anchor="end" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#171717">1</text>
+
+      <!-- HIGH -->
+      <text x="0" y="52" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="11" letter-spacing="1" fill="#171717">HIGH</text>
+      <rect x="96" y="40" width="484" height="16" fill="#fafafa" stroke="#eaeaea"></rect>
+      <rect x="96" y="40" width="103.7" height="16" fill="url(#hatch-high)" stroke="#b45309"></rect>
+      <text x="700" y="52" text-anchor="end" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#171717">3</text>
+
+      <!-- MEDIUM -->
+      <text x="0" y="86" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="11" letter-spacing="1" fill="#171717">MEDIUM</text>
+      <rect x="96" y="74" width="484" height="16" fill="#fafafa" stroke="#eaeaea"></rect>
+      <rect x="96" y="74" width="172.9" height="16" fill="url(#hatch-medium)" stroke="#171717"></rect>
+      <text x="700" y="86" text-anchor="end" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#171717">5</text>
+
+      <!-- LOW -->
+      <text x="0" y="120" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="11" letter-spacing="1" fill="#171717">LOW</text>
+      <rect x="96" y="108" width="484" height="16" fill="#fafafa" stroke="#eaeaea"></rect>
+      <rect x="96" y="108" width="103.7" height="16" fill="url(#hatch-low)" stroke="#8e8e8e"></rect>
+      <text x="700" y="120" text-anchor="end" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#171717">3</text>
+
+      <!-- INFORMATIONAL -->
+      <text x="0" y="154" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="11" letter-spacing="1" fill="#8e8e8e">INFO</text>
+      <rect x="96" y="142" width="484" height="16" fill="#fafafa" stroke="#eaeaea"></rect>
+      <rect x="96" y="142" width="69.1" height="16" fill="#ffffff" stroke="#a1a1a1" stroke-dasharray="3 2"></rect>
+      <text x="700" y="154" text-anchor="end" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" fill="#171717">2</text>
+
+      <line x1="96" y1="172" x2="580" y2="172" stroke="#eaeaea"></line>
+      <text x="96" y="186" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="9" fill="#8e8e8e">0</text>
+      <text x="580" y="186" text-anchor="end" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="9" fill="#8e8e8e">share of all findings</text>
+    </svg>
+
+    <div class="legend">
+      <span><i class="swatch" style="background:#c50000;border-color:#c50000"></i> Critical — solid</span>
+      <span><i class="swatch" style="background:repeating-linear-gradient(45deg,#b45309,#b45309 3px,#fff 3px,#fff 6px);border-color:#b45309"></i> High — coarse hatch</span>
+      <span><i class="swatch" style="background:repeating-linear-gradient(45deg,#171717,#171717 1.5px,#fff 1.5px,#fff 7px)"></i> Medium — fine hatch</span>
+      <span><i class="swatch" style="background:radial-gradient(#8e8e8e 22%,transparent 24%) 0 0/4px 4px;border-color:#8e8e8e"></i> Low — dotted fill</span>
+      <span><i class="swatch" style="border-style:dashed;border-color:#a1a1a1"></i> Informational — outline</span>
+    </div>
+  </div>
+
+  <table>
+    <caption>Severity summary and current status</caption>
+    <thead>
+      <tr>
+        <th>Severity</th>
+        <th class="num">Total</th>
+        <th class="num">Open</th>
+        <th class="num">Fixed</th>
+        <th class="num">Accepted</th>
+        <th class="num">Deferred</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge sev-critical"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>CRITICAL</span></td>
+        <td class="num">1</td><td class="num">1</td><td class="num">0</td><td class="num">0</td><td class="num">0</td>
+      </tr>
+      <tr>
+        <td><span class="badge sev-high"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>HIGH</span></td>
+        <td class="num">3</td><td class="num">2</td><td class="num">1</td><td class="num">0</td><td class="num">0</td>
+      </tr>
+      <tr>
+        <td><span class="badge sev-medium"><span class="pips"><i class="on"></i><i class="on"></i><i></i><i></i></span>MEDIUM</span></td>
+        <td class="num">5</td><td class="num">3</td><td class="num">1</td><td class="num">1</td><td class="num">0</td>
+      </tr>
+      <tr>
+        <td><span class="badge sev-low"><span class="pips"><i class="on"></i><i></i><i></i><i></i></span>LOW</span></td>
+        <td class="num">3</td><td class="num">1</td><td class="num">0</td><td class="num">1</td><td class="num">1</td>
+      </tr>
+      <tr>
+        <td><span class="badge sev-informational"><span class="pips"><i></i><i></i><i></i><i></i></span>INFORMATIONAL</span></td>
+        <td class="num">2</td><td class="num">2</td><td class="num">0</td><td class="num">0</td><td class="num">0</td>
+      </tr>
+      <tr>
+        <td class="mono" style="font-size:12px">TOTAL</td>
+        <td class="num" style="font-weight:700">14</td>
+        <td class="num">9</td><td class="num">2</td><td class="num">2</td><td class="num">1</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="meta" style="margin-top:16px">
+    Counts describe findings raised by this review only. They are not a measure of
+    total risk in the product, and no score is derived from them.
+  </p>
+</section>
+
+<!-- =========================================== 4. SCOPE AND METHODOLOGY -->
+<section class="sheet" id="s4">
+  <div class="section-head">
+    <span class="section-num">4</span>
+    <h2>Scope and methodology</h2>
+    <span class="meta">{{ASSESSMENT_START}} — {{ASSESSMENT_END}}</span>
+  </div>
+
+  <table class="t-compact">
+    <caption>In scope</caption>
+    <thead>
+      <tr><th style="width:34%">Asset</th><th style="width:22%">Ecosystem</th><th style="width:22%">Revision</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>{{ASSET_1_NAME}}</td><td>{{ASSET_1_ECOSYSTEM}}</td><td class="mono">{{ASSET_1_REVISION}}</td><td>{{ASSET_1_NOTES}}</td></tr>
+      <tr><td>{{ASSET_2_NAME}}</td><td>{{ASSET_2_ECOSYSTEM}}</td><td class="mono">{{ASSET_2_REVISION}}</td><td>{{ASSET_2_NOTES}}</td></tr>
+      <!-- repeat one <tr> per asset -->
+    </tbody>
+  </table>
+
+  <h3 style="margin:32px 0 10px">How the assessment was carried out</h3>
+  <p>{{METHOD_SUMMARY}}</p>
+  <p class="meta">
+    The review reads source code, dependency manifests, and configuration. It traces
+    data flow from inputs to sinks and checks for the presence or absence of
+    controls. It does not execute the application, does not attempt exploitation,
+    and does not perform network or infrastructure testing.
+  </p>
+
+  <table class="t-compact" style="margin-top:24px">
+    <caption>Checks and tools that ran</caption>
+    <thead>
+      <tr><th style="width:30%">Check</th><th style="width:26%">Tool / method</th><th style="width:20%">Coverage</th><th>Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>{{CHECK_1_NAME}}</td><td class="mono">{{CHECK_1_TOOL}}</td><td>{{CHECK_1_COVERAGE}}</td><td>{{CHECK_1_RESULT}}</td></tr>
+      <tr><td>{{CHECK_2_NAME}}</td><td class="mono">{{CHECK_2_TOOL}}</td><td>{{CHECK_2_COVERAGE}}</td><td>{{CHECK_2_RESULT}}</td></tr>
+      <tr><td>{{CHECK_3_NAME}}</td><td class="mono">{{CHECK_3_TOOL}}</td><td>{{CHECK_3_COVERAGE}}</td><td>{{CHECK_3_RESULT}}</td></tr>
+      <!-- repeat one <tr> per check; unrun checks belong in "Not assessed" below -->
+    </tbody>
+  </table>
+
+  <div class="not-assessed" id="s4-1">
+    <div class="eyebrow">4.1 — Read this before quoting the result</div>
+    <h3>Not assessed</h3>
+    <p>
+      A completed assessment is not a statement that everything was checked. The
+      areas below were outside this review. No conclusion — positive or negative —
+      can be drawn about them from this report.
+    </p>
+    <ul class="na-list">
+      <li><b>{{NA_1_AREA}}</b><span>{{NA_1_REASON}}</span></li>
+      <li><b>{{NA_2_AREA}}</b><span>{{NA_2_REASON}}</span></li>
+      <li><b>{{NA_3_AREA}}</b><span>{{NA_3_REASON}}</span></li>
+      <li><b>Exploitability</b><span>No exploit was attempted. Severity is a reviewer judgement, not a demonstrated impact.</span></li>
+      <li><b>Runtime and infrastructure</b><span>{{NA_RUNTIME_REASON}}</span></li>
+      <!-- repeat one <li> per excluded area. Never leave this list empty. -->
+    </ul>
+    <p class="meta" style="margin-top:16px">
+      Coverage of the assessed material: {{COVERAGE_STATEMENT}}
+    </p>
+  </div>
+</section>
+
+<!-- ======================================================== 5. FINDINGS -->
+<section class="sheet" id="s5">
+  <div class="section-head">
+    <span class="section-num">5</span>
+    <h2>Findings</h2>
+    <span class="meta mono">{{COUNT_TOTAL}} total · {{COUNT_OPEN}} open</span>
+  </div>
+
+  <table class="t-compact" style="margin-bottom:36px">
+    <caption>5.1 — Findings index</caption>
+    <thead>
+      <tr>
+        <th style="width:110px">Reference</th>
+        <th>Finding</th>
+        <th style="width:120px">Severity</th>
+        <th style="width:96px">Status</th>
+        <th style="width:26%">Component</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono"><a href="#ANT-2026-001">ANT-2026-001</a></td>
+        <td>Session token accepted without signature verification</td>
+        <td><span class="badge sev-critical">CRITICAL</span></td>
+        <td><span class="badge st-open">OPEN</span></td>
+        <td class="mono" style="font-size:11.5px">api/auth/session.ts</td>
+      </tr>
+      <tr>
+        <td class="mono"><a href="#ANT-2026-007">ANT-2026-007</a></td>
+        <td>Upload endpoint has no request size or rate limit</td>
+        <td><span class="badge sev-medium">MEDIUM</span></td>
+        <td><span class="badge st-deferred">DEFERRED</span></td>
+        <td class="mono" style="font-size:11.5px">services/media/upload.py</td>
+      </tr>
+      <tr>
+        <td class="mono">{{FINDING_ID}}</td>
+        <td>{{FINDING_TITLE}}</td>
+        <td><span class="badge sev-low">{{SEVERITY}}</span></td>
+        <td><span class="badge st-accepted">{{STATUS}}</span></td>
+        <td class="mono" style="font-size:11.5px">{{AFFECTED_COMPONENT}}</td>
+      </tr>
+      <!-- repeat one <tr> per finding, in the same order as the blocks below -->
+    </tbody>
+  </table>
+
+  <p class="sample-banner" style="margin-bottom:28px">
+    <strong>SAMPLE&nbsp;FINDINGS</strong>
+    <span>The two blocks below are examples of the repeated finding block, at two
+    different severities. They are not real findings for {{CLIENT_NAME}} and must be
+    removed before the report is issued.</span>
+  </p>
+
+  <!-- ============ FINDING BLOCK — repeat this element per finding ============ -->
+  <article class="finding" id="ANT-2026-001">
+    <header class="finding-head">
+      <div class="finding-idline">
+        <span class="finding-id">ANT-2026-001</span>
+        <span class="badge sev-critical"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>CRITICAL</span>
+        <span class="badge st-open">OPEN</span>
+        <span class="sample-tag">SAMPLE</span>
+      </div>
+      <h3>Session token accepted without signature verification</h3>
+    </header>
+
+    <dl class="finding-attrs">
+      <div><dt>Affected component</dt><dd class="mono">api/auth/session.ts</dd></div>
+      <div><dt>Category</dt><dd>Authentication</dd></div>
+      <div><dt>First observed</dt><dd class="mono">2026-08-11</dd></div>
+    </dl>
+
+    <div class="finding-body">
+      <div class="field">
+        <span class="eyebrow">Description</span>
+        <p>
+          The session middleware decodes the JSON Web Token supplied by the client and
+          reads the user identifier from its payload, but the verification call that
+          would check the token's signature is commented out. Any request carrying a
+          syntactically valid token is treated as authenticated.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">Business impact</span>
+        <p>
+          Account access does not depend on a credential the service can verify.
+          Anyone able to construct a token can act as any user of the application.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">Evidence</span>
+        <div class="evidence">api/auth/session.ts:41
+  const claims = jwt.decode(raw);          // decode only
+  // const claims = jwt.verify(raw, SECRET);  ← verification disabled
+
+Observed: no call to jwt.verify or equivalent on any code path
+reaching requireSession(). Control absent.</div>
+        <p class="field-note">
+          Observed in source during review. No request was sent to a running system
+          and no exploitation was attempted.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">Remediation</span>
+        <p>
+          Restore signature verification on every path that reads session claims, and
+          reject tokens that fail verification rather than falling through to the
+          decoded payload. Add a test that asserts a token signed with the wrong key
+          is refused.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">References</span>
+        <div class="refs">
+          <span class="ref">CWE-347</span>
+          <span class="ref">OWASP A07:2021 — Identification &amp; Authentication Failures</span>
+        </div>
+      </div>
+    </div>
+  </article>
+  <!-- ============ /FINDING BLOCK ============ -->
+
+  <article class="finding" id="ANT-2026-007">
+    <header class="finding-head">
+      <div class="finding-idline">
+        <span class="finding-id">ANT-2026-007</span>
+        <span class="badge sev-medium"><span class="pips"><i class="on"></i><i class="on"></i><i></i><i></i></span>MEDIUM</span>
+        <span class="badge st-deferred">DEFERRED</span>
+        <span class="sample-tag">SAMPLE</span>
+      </div>
+      <h3>Upload endpoint has no request size or rate limit</h3>
+    </header>
+
+    <dl class="finding-attrs">
+      <div><dt>Affected component</dt><dd class="mono">services/media/upload.py</dd></div>
+      <div><dt>Category</dt><dd>Resource control</dd></div>
+      <div><dt>First observed</dt><dd class="mono">2026-08-12</dd></div>
+    </dl>
+
+    <div class="finding-body">
+      <div class="field">
+        <span class="eyebrow">Description</span>
+        <p>
+          The upload handler streams the request body to disk without a declared
+          maximum size, and no rate limit is configured for the route in the
+          application or the reverse proxy configuration included in scope.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">Business impact</span>
+        <p>
+          A single authenticated client can consume storage and request capacity
+          without a limit defined anywhere in the assessed configuration.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">Evidence</span>
+        <div class="evidence">services/media/upload.py:88
+  while chunk := await request.stream.read(65536):
+      dest.write(chunk)                    # no cumulative size check
+
+deploy/nginx.conf — no client_max_body_size, no limit_req directive.
+Control absent.</div>
+        <p class="field-note">
+          Absence of a control, observed in the assessed source and configuration.
+          Runtime limits set outside the assessed material, if any, were not visible
+          to this review.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">Remediation</span>
+        <p>
+          Declare a maximum request size at the proxy and enforce a cumulative byte
+          limit in the handler. Apply a per-account rate limit to the route.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="eyebrow">References</span>
+        <div class="refs">
+          <span class="ref">CWE-770</span>
+          <span class="ref">OWASP A04:2021 — Insecure Design</span>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- Empty-state reference. Every field must render as visibly absent rather
+       than blank. Copy the strings below rather than leaving a field empty. -->
+  <article class="finding">
+    <header class="finding-head">
+      <div class="finding-idline">
+        <span class="finding-id">ANT-YYYY-NNN</span>
+        <span class="badge sev-low"><span class="pips"><i class="on"></i><i></i><i></i><i></i></span>{{SEVERITY}}</span>
+        <span class="badge st-accepted">{{STATUS}}</span>
+        <span class="sample-tag">EMPTY-STATE REFERENCE</span>
+      </div>
+      <h3>{{FINDING_TITLE}}</h3>
+    </header>
+    <dl class="finding-attrs">
+      <div><dt>Affected component</dt><dd class="mono">{{AFFECTED_COMPONENT}}</dd></div>
+      <div><dt>Category</dt><dd><span class="empty">Not established</span></dd></div>
+      <div><dt>First observed</dt><dd class="mono">{{FIRST_OBSERVED}}</dd></div>
+    </dl>
+    <div class="finding-body">
+      <div class="field"><span class="eyebrow">Description</span><p>{{DESCRIPTION}}</p></div>
+      <div class="field"><span class="eyebrow">Business impact</span><p><span class="empty">Not established — impact could not be determined from the assessed material.</span></p></div>
+      <div class="field">
+        <span class="eyebrow">Evidence</span>
+        <div class="evidence"><span class="empty">Not assessed — no observation recorded for this finding.</span></div>
+      </div>
+      <div class="field"><span class="eyebrow">Remediation</span><p><span class="empty">Not established</span></p></div>
+      <div class="field">
+        <span class="eyebrow">References</span>
+        <div class="refs"><span class="ref" style="border-style:dashed;color:#8e8e8e">No mapping recorded</span></div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================== 6. REMEDIATION ROADMAP -->
+<section class="sheet" id="s6">
+  <div class="section-head">
+    <span class="section-num">6</span>
+    <h2>Remediation roadmap</h2>
+    <span class="meta">Ordered by priority</span>
+  </div>
+
+  <p style="margin-bottom:20px">
+    Priority follows severity, then the order in which fixes unblock each other.
+    Effort is an estimate in engineering days by the reviewer, for planning only —
+    it is not a quotation.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:44px">#</th>
+        <th style="width:112px">Reference</th>
+        <th>Action</th>
+        <th style="width:112px">Severity</th>
+        <th style="width:104px">Effort</th>
+        <th style="width:92px">Owner</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono">1</td>
+        <td class="mono"><a href="#ANT-2026-001">ANT-2026-001</a></td>
+        <td>Restore session token signature verification <span class="sample-tag">SAMPLE</span></td>
+        <td><span class="badge sev-critical">CRITICAL</span></td>
+        <td><span class="effort"><span class="pips"><i class="on"></i><i></i><i></i></span>S · 1–2d</span></td>
+        <td>{{OWNER_1}}</td>
+      </tr>
+      <tr>
+        <td class="mono">2</td>
+        <td class="mono"><a href="#ANT-2026-007">ANT-2026-007</a></td>
+        <td>Add upload size and rate limits <span class="sample-tag">SAMPLE</span></td>
+        <td><span class="badge sev-medium">MEDIUM</span></td>
+        <td><span class="effort"><span class="pips"><i class="on"></i><i class="on"></i><i></i></span>M · 3–5d</span></td>
+        <td>{{OWNER_2}}</td>
+      </tr>
+      <tr>
+        <td class="mono">{{N}}</td>
+        <td class="mono">{{FINDING_ID}}</td>
+        <td>{{REMEDIATION_ACTION}}</td>
+        <td><span class="badge sev-low">{{SEVERITY}}</span></td>
+        <td><span class="effort"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i></span>{{EFFORT}}</span></td>
+        <td><span class="empty">Not established</span></td>
+      </tr>
+      <!-- repeat one <tr> per finding, highest severity first -->
+    </tbody>
+  </table>
+
+  <p class="meta" style="margin-top:16px">
+    Effort scale: S — under two days · M — three to five days · L — more than five
+    days or requires a design change. Where effort could not be estimated, the row
+    reads <span class="tok">Not established</span>.
+  </p>
+</section>
+
+<!-- ======================================================== 7. APPENDIX -->
+<section class="sheet" id="s7">
+  <div class="section-head">
+    <span class="section-num">7</span>
+    <h2>Appendix</h2>
+    <span class="meta">Reference material</span>
+  </div>
+
+  <h3>A — Tools and versions</h3>
+  <table class="t-compact" style="margin-top:12px">
+    <thead>
+      <tr><th style="width:28%">Tool</th><th style="width:16%">Version</th><th style="width:26%">Purpose</th><th>Run on</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="mono">{{TOOL_1_NAME}}</td><td class="mono">{{TOOL_1_VERSION}}</td><td>{{TOOL_1_PURPOSE}}</td><td class="mono">{{TOOL_1_DATE}}</td></tr>
+      <tr><td class="mono">{{TOOL_2_NAME}}</td><td class="mono">{{TOOL_2_VERSION}}</td><td>{{TOOL_2_PURPOSE}}</td><td class="mono">{{TOOL_2_DATE}}</td></tr>
+      <tr><td class="mono">{{TOOL_3_NAME}}</td><td class="mono">{{TOOL_3_VERSION}}</td><td>{{TOOL_3_PURPOSE}}</td><td class="mono">{{TOOL_3_DATE}}</td></tr>
+      <!-- repeat one <tr> per tool. Manual review steps belong here too. -->
+    </tbody>
+  </table>
+
+  <h3 style="margin:36px 0 12px">B — Severity definitions</h3>
+  <div class="glossary">
+    <div>
+      <span><span class="badge sev-critical"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>CRITICAL</span></span>
+      <span>A control that protects accounts, funds, or personal data is absent or
+      bypassable on a path reachable by an ordinary user. Address before release.</span>
+    </div>
+    <div>
+      <span><span class="badge sev-high"><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>HIGH</span></span>
+      <span>A significant weakness that requires a specific condition, role, or
+      sequence to matter. Address in the current cycle.</span>
+    </div>
+    <div>
+      <span><span class="badge sev-medium"><span class="pips"><i class="on"></i><i class="on"></i><i></i><i></i></span>MEDIUM</span></span>
+      <span>A missing or weak control with limited reach, or one mitigated elsewhere
+      in the assessed material. Schedule.</span>
+    </div>
+    <div>
+      <span><span class="badge sev-low"><span class="pips"><i class="on"></i><i></i><i></i><i></i></span>LOW</span></span>
+      <span>Hardening or hygiene. No direct path to harm was identified in this
+      review.</span>
+    </div>
+    <div>
+      <span><span class="badge sev-informational"><span class="pips"><i></i><i></i><i></i><i></i></span>INFORMATIONAL</span></span>
+      <span>An observation recorded for the reader's awareness. Not a defect.</span>
+    </div>
+  </div>
+
+  <h3 style="margin:36px 0 12px">C — Status definitions</h3>
+  <div class="glossary">
+    <div><span><span class="badge st-open">OPEN</span></span><span>Reported and not yet resolved.</span></div>
+    <div><span><span class="badge st-fixed">FIXED</span></span><span>A change was made and re-reviewed against the same material.</span></div>
+    <div><span><span class="badge st-accepted">ACCEPTED</span></span><span>The client has accepted the risk in writing. Recorded, not resolved.</span></div>
+    <div><span><span class="badge st-deferred">DEFERRED</span></span><span>Scheduled for a later cycle. Still open.</span></div>
+  </div>
+
+  <h3 style="margin:36px 0 12px">D — What this report does not contain</h3>
+  <p>
+    No CVSS score or vector is given. This assessment reads code and configuration;
+    it does not run exploits or measure attack complexity, so any score would be a
+    fabricated figure in a standard's notation. Severity labels above are reviewer
+    judgements against the definitions in Appendix B.
+  </p>
+  <p>
+    Evidence quotes only what was observed — a file and line, a tool's own output,
+    or the absence of a control. It is not a proof of concept and does not
+    demonstrate a working attack.
+  </p>
+</section>
+
+<footer class="doc-footer">
+  <span>{{VENDOR_NAME}} · {{ENGAGEMENT_REF}} · v{{DOC_VERSION}} · {{REPORT_DATE}}</span>
+  <span class="mono">CONFIDENTIAL — {{CLIENT_NAME}}</span>
+</footer>
+
+</div>
+</body>
+</html>

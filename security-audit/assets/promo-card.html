@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>security-audit — Antikode Backend</title>
+<style>
+  :root {
+    --ground: #ECEEE9;
+    --panel:  #F7F8F5;
+    --ink:    #161A19;
+    --muted:  #5F6A65;
+    --rule:   #CFD4CF;
+    --accent: #1D4D3F;
+    --crit:   #9D2F26;
+    --high:   #8C6115;
+
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --sans:  -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+    --mono:  ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#111413; --panel:#171B19; --ink:#E7EAE6; --muted:#8B9691;
+      --rule:#29302D; --rule:#282E2B; --accent:#6FBFA5; --crit:#D9776C; --high:#C79A45;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#111413; --panel:#171B19; --ink:#E7EAE6; --muted:#8B9691;
+    --rule:#282E2B; --accent:#6FBFA5; --crit:#D9776C; --high:#C79A45;
+  }
+  :root[data-theme="light"] {
+    --ground:#ECEEE9; --panel:#F7F8F5; --ink:#161A19; --muted:#5F6A65;
+    --rule:#CFD4CF; --accent:#1D4D3F; --crit:#9D2F26; --high:#8C6115;
+  }
+
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+  }
+
+  .stage, .stage * { box-sizing: border-box; }
+
+  .stage {
+    width: 1600px;
+    height: 900px;
+    padding: 66px 76px 58px;
+    background: var(--ground);
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  /* ---------- the one invocation example, on the phase it belongs to ---------- */
+  .prow { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .inv {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--accent);
+    border: 1px solid var(--rule);
+    padding: 3px 10px 4px;
+    white-space: nowrap;
+  }
+
+  /* ---------- header ---------- */
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; }
+
+  .mark {
+    font-family: var(--mono);
+    font-size: 46px;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+    margin: 0;
+  }
+  .mark .dash { color: var(--muted); }
+
+  .tag {
+    font-family: var(--serif);
+    font-size: 25px;
+    line-height: 1.35;
+    color: var(--muted);
+    margin: 12px 0 0;
+    max-width: 30ch;
+    text-wrap: balance;
+  }
+
+  .ver {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.9;
+    white-space: nowrap;
+  }
+  .ver b { color: var(--ink); font-weight: 500; }
+  .ver .stack { letter-spacing: 0.02em; }
+
+  /* ---------- grid ---------- */
+  .grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 0.92fr;
+    gap: 66px;
+    align-items: stretch;
+  }
+
+  .col { display: flex; flex-direction: column; min-width: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 22px;
+  }
+
+  /* ---------- workflow ---------- */
+  .flow { display: flex; flex-direction: column; flex: 1; }
+
+  .phase { display: grid; grid-template-columns: 34px 1fr; gap: 18px; align-items: start; }
+
+  .num {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    padding-top: 7px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pname {
+    font-family: var(--serif);
+    font-size: 31px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .pdesc {
+    font-size: 16.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0;
+    max-width: 44ch;
+  }
+  .pdesc code {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--ink);
+  }
+
+  /* the gate: a pause between two solid blocks */
+  .gate {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0 20px 52px;
+  }
+  .gate .line { height: 1px; background: var(--rule); flex: 1; }
+  .gate span {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ---------- output sample ---------- */
+  .pane {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 26px 28px 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  pre {
+    font-family: var(--mono);
+    font-size: 14.5px;
+    line-height: 1.95;
+    margin: 0;
+    color: var(--ink);
+    white-space: pre;
+  }
+  .sev { font-weight: 600; }
+  .c { color: var(--crit); }
+  .h { color: var(--high); }
+  .dim { color: var(--muted); }
+  .loc { color: var(--accent); }
+
+  .verdict {
+    font-family: var(--mono);
+    font-size: 14.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    margin: 20px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  .dim2 { color: var(--muted); }
+  .note {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 14px 0 0;
+    font-style: italic;
+  }
+
+  /* ---------- footer ---------- */
+  .foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 40px;
+    border-top: 1px solid var(--rule);
+    padding-top: 26px;
+  }
+  .cmd { font-family: var(--mono); font-size: 18px; margin: 0; }
+  .cmd .prompt { color: var(--muted); margin-right: 10px; }
+  .by {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  /* Reflow for real screens. Breakpoint is target - 1, never at or above the
+     stage width, or the mobile stack would apply to the fixed render too. */
+  @media (max-width: 1599px) {
+    .stage {
+      width: 100%;
+      max-width: 1040px;
+      height: auto;
+      padding: 40px 28px 44px;
+      gap: 30px;
+    }
+    .grid { grid-template-columns: 1fr; gap: 34px; }
+    .head { flex-direction: column; align-items: flex-start; gap: 18px; }
+    .ver { text-align: left; line-height: 1.7; }
+    .pane { padding: 20px 20px 18px; }
+    pre { font-size: 13px; }
+    .foot { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+
+  /* Narrow phones: the output pane is a fixed-width monospace block, so it gets
+     its own horizontal scroll rather than forcing the page sideways. */
+  @media (max-width: 620px) {
+    .stage { padding: 28px 18px 32px; }
+    .mark { font-size: 34px; }
+    .tag { font-size: 20px; }
+    .pname { font-size: 26px; }
+    .phase { grid-template-columns: 26px 1fr; gap: 12px; }
+    .gate { margin-left: 38px; }
+    .pane { overflow-x: auto; }
+    pre { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <header class="head">
+    <div>
+      <h1 class="mark">security<span class="dash">-</span>audit</h1>
+      <p class="tag">Audit, then a plan, then the fixes &mdash; and it stops to ask between each one.</p>
+    </div>
+    <div class="ver">
+      <div>v<b>0.2.2</b></div>
+      <div class="stack">go &middot; php &middot; laravel &middot; node &middot; bun</div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <section class="col">
+      <p class="eyebrow">How it runs</p>
+      <div class="flow">
+
+        <div class="phase">
+          <div class="num">01</div>
+          <div>
+            <div class="prow">
+              <h2 class="pname">Audit</h2>
+              <span class="inv">/security-audit</span>
+            </div>
+            <p class="pdesc">Runs the project&rsquo;s own dependency audit, then greps the high-signal classes. One ranked table, ten rows at most, every row an openable <code>path:line</code>.</p>
+          </div>
+        </div>
+
+        <div class="gate"><span>asks before writing anything</span><div class="line"></div></div>
+
+        <div class="phase">
+          <div class="num">02</div>
+          <div>
+            <h2 class="pname">Plan</h2>
+            <p class="pdesc">Writes <code>docs/security-audit/&lt;date&gt;-plan.md</code> &mdash; CRIT and HIGH only, findings table embedded, fix order where one finding enables another.</p>
+          </div>
+        </div>
+
+        <div class="gate"><span>asks before touching code</span><div class="line"></div></div>
+
+        <div class="phase">
+          <div class="num">03</div>
+          <div>
+            <h2 class="pname">Build</h2>
+            <p class="pdesc">One finding, one edit. Each closed fix is verified by a real command &mdash; a build, the test suite, a request that used to succeed and now returns 403.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="col">
+      <p class="eyebrow">What comes back</p>
+      <div class="pane">
+<pre><span class="dim">| Sev  | Finding              | Location</span>
+<span class="sev c">| CRIT</span> | hardcoded JWT secret | <span class="loc">config/auth.yaml:8</span>
+<span class="sev c">| CRIT</span> | route group, no auth | <span class="loc">router/router.go:20</span>
+<span class="sev h">| HIGH</span> | unbounded OTP verify | <span class="loc">OtpController.php:88</span>
+<span class="sev h">| HIGH</span> | bcrypt cost 4        | <span class="loc">supports/bcrypt.go:12</span>
+<span class="sev h">| HIGH</span> | CSRF off on /upload  | <span class="loc">bootstrap/app.php:24</span>
+<span class="dim">| MED </span> | no limit on /signup  | <span class="loc">routes/api.php:29</span>
+<span class="dim">| LOW </span> | headers mw disabled  | <span class="loc">bootstrap/app.php:22</span></pre>
+        <p class="verdict">5 critical/high reachable &mdash; blocker.<br><span class="dim2">Not scanned: composer audit unavailable.</span></p>
+        <p class="note">example output</p>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="foot">
+    <p class="cmd"><span class="prompt">$</span>anti-skill install security-audit --global</p>
+    <p class="by">Developed by Backend Team</p>
+  </footer>
+
+</div>
+</body>
+</html>

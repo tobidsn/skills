@@ -1,11 +1,13 @@
 ---
 name: security-audit
-description: Lightweight security audit, then optionally a fix plan and the fixes. Runs the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and greps the high-signal classes: SQL injection, command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled public writes, unbounded OTP or 2FA verify attempts, race conditions. Use whenever someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or work out rate limits, OTP protections, or bot filtering for an endpoint — and when they want those findings turned into a plan under `docs/security-audit/` or actually fixed. An auto mode ("audit auto", "audit and plan the fixes") writes the plan without stopping to ask. Phase one is one ranked table with openable `path:line` and never an edit; code changes always wait for explicit approval.
+description: Lightweight security audit, then optionally a fix plan and the fixes. Runs the project's own dependency audit (npm/pnpm/yarn/bun audit, `composer audit`, `govulncheck`) and greps the high-signal classes: SQL injection, command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled public writes, unbounded OTP or 2FA verify attempts, race conditions. Use whenever someone asks to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or work out rate limits, OTP protections, or bot filtering for an endpoint — and when they want those findings turned into a plan under `docs/security-audit/` or actually fixed. An auto mode ("audit auto", "audit and plan the fixes") writes the plan without stopping to ask. Phase one is one ranked table with openable `path:line` and never an edit; code changes always wait for explicit approval. A manual `/security-audit report` subcommand renders the findings as a self-contained HTML assessment report for clients and delivery leads — vendor-style cover, risk profile, per-finding blocks, and an explicit "Not assessed" section — written only when asked for, never by a phase.
 ---
 
 # security-audit
 
 Three phases: **audit** → **plan** → **build**. Phase one is a table and nothing else; the later phases only happen when the human has said so.
+
+Alongside them sits one manual subcommand, `/security-audit report`, which renders the findings as an HTML assessment report for stakeholders. It is never triggered by a phase — see the section near the end.
 
 ## Interactive or auto
 
@@ -43,9 +45,9 @@ Not scanned: composer audit unavailable (Composer 2.3).
 
 Rules, because the failure mode here is a wall of text nobody reads:
 
-- **Max 10 rows**, ranked CRIT → HIGH → MED → LOW. More than 10 findings: keep the top 10 and say `+N more (MED/LOW)` on the verdict line.
+- **Every CRIT and HIGH gets a row — always, however many there are.** Rank CRIT → HIGH → MED → LOW, then let MED/LOW fill the table to about 10 rows and collapse the rest to `+N more (MED/LOW)` on the verdict line. The cap is a readability device for the tail, never something a blocker falls off the end of: truncating a CRIT and labelling it `MED/LOW` on the way out hides the finding *and* misreports its severity. If CRIT and HIGH alone run past 10, the table is longer than 10 rows and that is correct — a repo with twelve blockers has twelve blockers, and the count is itself the finding. Aggregating dependencies to one row per ecosystem already keeps the ordinary case well under the cap.
 - **Every row needs a real location, and code rows need `path:line`.** No location, no row — a finding you can't open is a guess. Cite a line number only when *that line is the finding*: `go.mod:3` is right for a missing `toolchain` floor, because the absent directive belongs on that line. An arbitrary lockfile line for "45 advisories across 17 packages" points at nothing — that row's location is `composer.lock`, or the package coordinate (`vendor/package@1.2.3`) when it's one package. Fake precision is worse than none: it survives review because it looks checkable.
-- **Aggregate dependency findings to one row per ecosystem.** A repo with 45 composer advisories and 78 npm ones cannot spend the 10-row budget on them, and 17 separate package rows would bury the code findings. One row each, carrying the counts that decide urgency (`1 critical + 13 high across 17 packages`). The per-package detail belongs in the plan's provenance block, not the table.
+- **Aggregate dependency findings to one row per ecosystem.** A repo with 45 composer advisories and 78 npm ones cannot spend the table's row budget on them, and 17 separate package rows would bury the code findings. One row each, carrying the counts that decide urgency (`1 critical + 13 high across 17 packages`). The per-package detail belongs in the plan's provenance block, not the table.
 - **`Fix` is a fragment, not a sentence.** `bind param`, `use os.Root`, `throttle:6,1`. Detail lives in the language reference, not the table.
 - **The verdict number is literally the count of CRIT + HIGH rows in the table.** Count the rows; don't estimate. A verdict that disagrees with its own table destroys trust in every other number.
 - **`Not scanned:` is one optional line for what you could not check** — a missing scanner, an unreadable dependency, a path you were denied. Use it whenever it applies: silence reads as "clean", and a scan that didn't happen is not a clean scan. One line, no elaboration.
@@ -196,6 +198,18 @@ Then work the plan, CRIT before HIGH, **in the order `Notes` gives** when it nam
 - **Say what you did not fix and why.** An upstream dependency finding (a wrapper's bcrypt cost in a shared library) may need a wrapper or an upstream bump rather than an edit here. Promising an edit you can't make is worse than naming the constraint.
 - **Rotate, don't just unhardcode.** A secret that reached a repo, a log, or a readable file is compromised; removing the literal doesn't un-leak it. Flag rotation as a step the human must do — you cannot do it for them.
 
+## `/security-audit report` — the stakeholder report
+
+A side door, not a fourth phase. **Only ever runs when someone types it** — no phase produces it, no gate offers it, and a clean audit does not trigger it.
+
+It exists because the plan cannot serve the other reader. A plan is a work order — Goals, `path:line`, verification commands — and a client or delivery lead reading it still can't answer *"can we ship, and what are we accepting if we do?"* The report answers that: same findings, risk stated as consequence rather than mechanism, and the limits of the review promoted from a trailing line to a section.
+
+Output is one self-contained HTML file at `<audited project>/docs/security-audit/<YYYY-MM-DD>-<slug>-report.html` — no network, opens anywhere, prints to PDF with page breaks and a `CONFIDENTIAL` footer already handled.
+
+Content comes from the audit run in this session; failing that, the newest `docs/security-audit/*-plan.md` and its embedded findings; failing both, run the audit first and say so. Never invent a finding to fill a field.
+
+Read `references/report.md` before writing it — it carries the fill procedure, the severity and status mapping, and two mandatory guards. Both guards matter more than they look: the template ships with two **sample findings** that must be deleted, and `grep -n "SAMPLE\|{{"` on the finished file must come back empty. A surviving sample block delivers a fabricated critical to a client.
+
 ## What this skill is not
 
 Not a threat-modeling framework, not a compliance/GDPR review, not a secrets-history scan, and not a fan-out of parallel audit agents. One pass, one table, then only what the human approves. If they want a design-level review, say so in a sentence and let them ask.
@@ -209,5 +223,6 @@ Loaded on demand, never all at once.
 - `references/go.md` — read when `go.mod` exists
 - `references/rate-limits.md` — read when a throttling row fires, an OTP/verification flow is in scope, or a public endpoint costs money per request
 - `references/plan-template.md` — read only after the human approves a plan
+- `references/report.md` — read only on `/security-audit report`; it points at `assets/report-template.html`, which is copied and filled in place rather than read into context
 
 The three language files are BAD/GOOD for the nine classes above; read one to write a fix, not to produce the table.
