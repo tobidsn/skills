@@ -4,11 +4,12 @@
     {
       "id": 0,
       "name": "memo-single-page",
-      "prompt": "convert \"/Users/tobi/Downloads/002. MI - Penetapan Jam Kerja selama Ramadhan 2025 .pdf\" ke html, font dan layoutnya samain ya",
-      "expected_output": "One self-contained .html reproducing the single-page A4 memo: Antikode wordmark, centred MEMO INTERNAL heading block, underlined title, justified body, numbered list, three signature blocks with signature images, QR code, footer address line. Images inlined as data URIs. Correct font family and size measured from the source.",
+      "prompt": "convert \"<path>/internal-memo.pdf\" ke html, font dan layoutnya samain ya",
+      "expected_output": "One self-contained .html reproducing a single-page A4 memo: centred wordmark, heading block, underlined title, justified body, a numbered list, three signature blocks whose scanned signatures keep their transparency, a QR code, and a footer address line. Images inlined as data URIs. Font family and size measured from the source, not guessed.",
       "files": [
-        "/Users/tobi/Downloads/002. MI - Penetapan Jam Kerja selama Ramadhan 2025 .pdf"
+        "<path>/internal-memo.pdf"
       ],
+      "source_note": "Use any 1-page A4 memo with a logo, scanned signatures stored with soft masks, and justified body text. The soft masks are the point: without compositing them the signatures render as grey boxes.",
       "assertions": [
         "Deliverable outputs/final.html exists",
         "Single self-contained file: no external image or asset references",
@@ -27,11 +28,12 @@
     {
       "id": 1,
       "name": "quotation-multipage-tables",
-      "prompt": "tolong bikin versi HTML dari \"/Users/tobi/Downloads/Policy Quotation - BC-Auto-20240900071.pdf\" \u2014 harus persis sama seperti PDF-nya, mau dikirim ke client",
-      "expected_output": "One self-contained .html of all 5 pages: blue geometric header and footer artwork, bilingual centred titles, key/value tables with hairline rules and correct column split, page-number strings, teal footer bar. Page breaks match the source. Images inlined.",
+      "prompt": "tolong bikin versi HTML dari \"<path>/quotation.pdf\" - harus persis sama seperti PDF-nya, mau dikirim ke client",
+      "expected_output": "One self-contained .html of every page: full-bleed header and footer artwork, centred bilingual titles, key/value tables with hairline rules and the correct column split, page-number strings, coloured footer bar. Page breaks match the source.",
       "files": [
-        "/Users/tobi/Downloads/Policy Quotation - BC-Auto-20240900071.pdf"
+        "<path>/quotation.pdf"
       ],
+      "source_note": "Use any 4-6 page document with full-bleed vector artwork, bilingual label/value tables, and a NON-EMBEDDED body font (check the emb column in `pdffonts`) - that last property is what exercises the trap where the reference render is itself a font substitution.",
       "assertions": [
         "Deliverable outputs/final.html exists",
         "Single self-contained file: no external image or asset references",
@@ -47,5 +49,6 @@
         "Soft-masked artwork keeps its transparency"
       ]
     }
-  ]
+  ],
+  "note": "Eval inputs are intentionally not committed: they were real client and internal documents. Substitute your own PDFs matching each source_note."
 }
