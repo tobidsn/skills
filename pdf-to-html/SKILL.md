@@ -98,6 +98,8 @@ Hand over the single `.html`. Say what it is, then be specific about the two thi
 
 Every one of these produced output that looked plausible and was wrong.
 
+**A PDF with no text layer cannot be transcribed, only reproduced.** Scans and flattened design-tool exports have zero glyphs, so there is no font to match, no line pitch to read, no ladder to reproduce — `report.md` says so outright. The failure mode here is retyping the page from the preview image and guessing the layout, which invents a document that looks authoritative and is partly fiction. Place the page raster full-bleed and say the text is not selectable, or OCR first and treat the result as a new document rather than a transcription. Either is fine; say which one you did.
+
 **Word compresses word spacing when it justifies; CSS only expands.** On a line where the next word almost fits, Word squeezes the spaces and takes it. `text-align: justify` cannot, so that line wraps and every line under it shifts down. Expect a handful of paragraphs across a long document to run one line longer.
 
 Do not chase it by shrinking the font or adding negative letter-spacing — you will fit words the source did not and desynchronise in the other direction. Widen the measure by a fraction of a millimetre if it helps, then let the affected box absorb the extra line. Check that nothing lands under a footer band or outside its border, because that is the only version of this that actually loses content.

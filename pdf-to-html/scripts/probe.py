@@ -270,11 +270,21 @@ def main():
             for (fam, sz), n in ranked[:14]:
                 role = "body" if (fam, sz) == ranked[0][0] else ""
                 fh.write(f"| {fam} | {sz:.2f} | {n} | {role} |\n")
-        else:
+        elif not have_glyphs:
             fh.write("## fonts and sizes\n\nUNAVAILABLE - pdf2txt.py is not installed, so "
                      "there is no font census and no `geometry.txt`. Install it "
                      "(`pipx install pdfminer.six`) and re-run before building; the font and "
                      "its size are the two facts fidelity depends on most.\n")
+        else:
+            fh.write("## fonts and sizes\n\n**This PDF has no text layer.** pdf2txt.py ran "
+                     "and found zero glyphs, so every page is a picture - a scan, or a "
+                     "flattened export from a design tool.\n\n"
+                     "None of the measure-the-text approach applies here: there is no font "
+                     "to match, no line pitch to read, no indent ladder to reproduce. Do not "
+                     "retype the page and guess at its layout; that invents a document. "
+                     "Either place the page raster full-bleed and say plainly that the text "
+                     "is not selectable, or OCR it first and treat the result as a new "
+                     "document rather than a transcription. Say which one you did.\n")
         fh.write("\n## images per page\n\n")
         for p in range(1, npages + 1):
             fh.write(f"- page {p}: {per_page.get(p,0)}\n")
@@ -284,6 +294,8 @@ def main():
     print(f"  previews: {out}/pages/pg-*.png   <- read these next")
     if ranked:
         print(f"  body font looks like: {ranked[0][0][0]} @ {ranked[0][0][1]:.2f}pt")
+    elif have_glyphs:
+        print("  !! no text layer: every page is a picture. See report.md before building.")
 
 
 if __name__ == "__main__":
