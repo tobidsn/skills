@@ -1,17 +1,19 @@
 ---
 name: security-audit
-description: Security audit, then optionally a fix plan and the fixes, each phase gated. Runs the project's own dependency audit (npm/pnpm/yarn/bun, `composer audit`, `govulncheck`) and greps the high-signal code classes: SQL and command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled writes, unbounded OTP attempts, race conditions, missing object-level authorization (IDOR), open registration, client-header trust, and debug tooling exposed in production. Use to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or set rate limits, OTP protections, and bot filtering for an endpoint. Phase one is one ranked `path:line` table and never an edit; code changes always wait for explicit approval. `audit auto` skips only the plan confirmation. `/security-audit report` renders the findings as a self-contained HTML assessment report for stakeholders; `/security-audit issue` publishes them as one agent-grabbable spec issue on the project's GitHub/GitLab tracker; `/security-audit tickets` breaks the remediation into tracer-bullet tickets with blocking edges. All three are manual only, never triggered by a phase.
+description: Security audit, then optionally a fix plan and the fixes, each phase gated. Runs the project's own dependency audit (npm/pnpm/yarn/bun, `composer audit`, `govulncheck`) and greps the high-signal code classes: SQL and command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled writes, unbounded OTP attempts, race conditions, missing object-level authorization (IDOR), open registration, client-header trust, and debug tooling exposed in production. Use to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or set rate limits, OTP protections, and bot filtering for an endpoint. Phase one is one ranked `path:line` table and never an edit; code changes always wait for explicit approval. `audit auto` skips only the plan confirmation. `/security-audit report` renders the findings as a self-contained HTML assessment report for stakeholders (manual only); `/security-audit issue` publishes them as one agent-grabbable spec issue on the project's GitHub/GitLab tracker — also offered at the post-audit gate as the tracker-shaped alternative to the plan file; `/security-audit tickets` breaks the remediation into tracer-bullet tickets with blocking edges — also offered once after an issue publishes. Publishing to the tracker always shows the full draft and waits for an explicit yes.
 ---
 
 # security-audit
 
 Three phases: **audit** → **plan** → **build**. Phase one is a table and nothing else; the later phases only happen when the human has said so.
 
-Alongside them sit three manual subcommands, never triggered by a phase — see the sections near the end:
+Alongside them sit three subcommands — see the sections near the end:
 
-- `/security-audit report` — the findings as an HTML assessment report for stakeholders.
-- `/security-audit issue` — the findings as one spec-shaped issue on the project's tracker.
-- `/security-audit tickets` — the remediation as tracer-bullet tickets with blocking edges.
+- `/security-audit report` — the findings as an HTML assessment report for stakeholders. Manual only, never offered by a gate.
+- `/security-audit issue` — the findings as one spec-shaped issue on the project's tracker. Also offered at gate 1 as the tracker-shaped alternative to the plan file.
+- `/security-audit tickets` — the remediation as tracer-bullet tickets with blocking edges. Also offered once after an issue is published.
+
+The natural tracker workflow is **audit → issue → tickets**: the table finds the problems, the issue is the agent-grabbable work order, the tickets split it when one PR can't carry it. The local plan file serves the same role as the issue for teams that don't work from a tracker.
 
 ## Interactive or auto
 
@@ -22,6 +24,7 @@ Alongside them sit three manual subcommands, never triggered by a phase — see 
 - `/security-audit auto`, `audit auto`, `--auto`
 - "audit this and give me a remediation plan", "audit and plan the fixes", "audit + plan"
 - "audit this and write up what needs fixing", "review security and draft the fix plan"
+- "audit this and file the issue", "audit and put it on the tracker" — same skip, but phase 2 takes the **issue** shape instead of the plan file; the publish confirm (full draft, explicit yes) still holds, because auto never sends anything outward on its own
 
 The point of auto isn't speed, it's not asking a question the human already answered. If someone asked for a plan in their opening message, stopping to ask whether they want a plan is noise — read the intent and go.
 
@@ -172,17 +175,19 @@ What to check once you're there: bcrypt cost (`MinCost` is **4**; the default is
 
 This generalizes past hashing: a name that matches the GOOD column is a reason to look closer, never a reason to stop. Report the finding at the wrapper's own `path:line` and note in `Fix` when it's upstream and cannot be changed in-repo.
 
-## Gate 1: ask before planning
+## Gate 1: ask where the findings go
 
 **Interactive mode only — auto mode skips straight to phase 2.**
 
 After the table, ask once — a real question with options, not a rhetorical one. Nothing is written until the answer comes back:
 
-> Want a fix plan for the CRIT/HIGH findings, or is the table enough?
+> Want a fix plan (local file), a spec issue on the tracker, or is the table enough?
 
 Ask it in whatever language the conversation is already in — this is shown to a human, not matched against a pattern.
 
-Offer three: **write the plan**, **fix now without a plan** (they accept the fixes as listed), **just the table**. If there are no CRIT or HIGH rows, don't ask at all — say the table is the whole answer and stop. A plan for three LOW findings is a backlog, not a plan.
+Offer four: **write the plan** (local `docs/` file), **publish a spec issue** (the `issue` flow — same work order, but living on the tracker where the team picks up work), **fix now without a plan** (they accept the fixes as listed), **just the table**. The plan and the issue are two shapes of the same phase-2 artifact — pick one, don't produce both unless asked. If there are no CRIT or HIGH rows, don't ask at all — say the table is the whole answer and stop. A plan for three LOW findings is a backlog, not a plan.
+
+Choosing the issue at this gate does not skip the publish confirm — the full draft is still shown and only an explicit yes creates it. After the issue is published, offer `tickets` once (one sentence, not a pitch); if declined, the flow ends there.
 
 The gate exists because a security fix often has several legitimate shapes with different trade-offs, and that choice belongs to the human. It is a cheap question, so ask it — unless they already answered it by asking for a plan up front, which is what auto mode is for.
 
@@ -223,7 +228,7 @@ Read `references/report.md` before writing it — it carries the fill procedure,
 
 ## `/security-audit issue` and `/security-audit tickets` — the tracker
 
-Two more side doors, same rules as `report`: **only ever run when someone types them**, and content comes from the audit run in this session, else the newest plan file, else run the audit first. Read `references/issue.md` before either — it carries the repo/platform resolution (git remote → `gh` or `glab`), the fill procedures, and the publish commands.
+Two entry points: typed directly, or chosen when a gate offers them (`issue` at gate 1, `tickets` once after an issue publishes). Neither ever runs unprompted, and neither publishes without the draft confirm below. Content comes from the audit run in this session, else the newest plan file, else run the audit first. Read `references/issue.md` before either — it carries the repo/platform resolution (git remote → `gh` or `glab`), the fill procedures, and the publish commands.
 
 `issue` publishes **one spec-shaped issue** — Problem Statement / Solution / User Stories / Implementation Decisions / Testing Decisions / Out of Scope / Further Notes, labelled `ready-for-agent` — written so an agent or engineer can work the remediation without ever seeing the audit session. CRIT/HIGH drive the spec; MED/LOW are named in Out of Scope. No `path:line` in the body (it goes stale — the plan file carries the evidence and gets referenced instead).
 

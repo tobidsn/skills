@@ -1,9 +1,11 @@
 # Publishing findings to the issue tracker
 
-Two manual subcommands, both side doors like `report` — no phase triggers them, no gate offers them, they run only when someone types them:
+Two subcommands, reached by typing them or by saying yes when a gate offers them (`issue` at gate 1 as the tracker-shaped phase 2, `tickets` once after an issue publishes) — never unprompted:
 
 - `/security-audit issue` — one spec-shaped issue carrying the whole remediation, agent-grabbable.
 - `/security-audit tickets` — the remediation broken into tracer-bullet tickets with blocking edges.
+
+The issue and the local plan file are two shapes of the same phase-2 artifact; produce one, not both, unless asked.
 
 Both publish to the tracker of the project **being audited**, discovered from its own git remote. Publishing an issue is outward-facing and visible to the whole team: **always show the full draft and get an explicit yes before creating anything**, in every mode including auto.
 
@@ -67,7 +69,7 @@ Write the draft to a scratch file and pass `--body-file` — a multi-kilobyte bo
 
 For when one issue is too big to land as one PR. Break the remediation into **vertical slices**: each ticket cuts a complete path through every layer (route, middleware/config, tests) and is demoable on its own — never "all the config" in one ticket and "all the tests" in another. Size each to a single fresh context window.
 
-Give each ticket its **blocking edges** — and here the audit already computed them: **the fix-the-chain ordering from the plan is the dependency graph.** The enabler finding blocks the findings it enables (closing the OTP disclosure endpoint blocks the wrong-guess-cap ticket, because the cap is meaningless while codes are readable). Dependency upgrades usually have no blockers and can start immediately.
+Give each ticket its **blocking edges** — and here the audit already computed them: **the fix-the-chain ordering is the dependency graph** (from the plan's `Notes` when a plan exists, else from the issue's Implementation Decisions, else from the audit's own chain reasoning). The enabler finding blocks the findings it enables (closing the OTP disclosure endpoint blocks the wrong-guess-cap ticket, because the cap is meaningless while codes are readable). Dependency upgrades usually have no blockers and can start immediately.
 
 Before publishing, present the breakdown as a numbered list — title, blocked-by, what it delivers — and ask whether the granularity and edges are right. Iterate until approved; then publish blockers first so later tickets can reference real identifiers:
 
