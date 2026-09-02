@@ -135,6 +135,37 @@ r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
 A `http.Server{}` literal with no timeouts is itself a MED finding.
 
+## Missing object-level authorization (IDOR) — CRIT
+
+Auth middleware proves the caller has a session; it says nothing about the row.
+
+```go
+// BAD — any authenticated user reads any project
+db.QueryRow("SELECT … FROM projects WHERE id = $1", chi.URLParam(r, "id"))
+
+// GOOD — the owner is a WHERE clause, not an afterthought
+db.QueryRow("SELECT … FROM projects WHERE id = $1 AND user_id = $2", id, userID(r.Context()))
+// sql.ErrNoRows → 404, not 403 — don't confirm the id exists
+```
+
+Every handler that loads a record by URL id needs the owner column in the query (or an explicit authorize step). Per-user data with zero owner filters anywhere is one CRIT row for the app. An open self-registration endpoint next to it upgrades the exposure to the whole internet — report both and name the chain.
+
+## Client headers as authorization — HIGH
+
+`Origin`, `Referer`, and `X-Forwarded-For` are written by the client — never branch access on them, and never let an empty allowlist mean "allow all". Authorization is a server-side credential checked in middleware; an unconfigured allowlist fails closed (`403`), not open.
+
+## Debug surface in production — HIGH
+
+```go
+// BAD — pprof registers itself on http.DefaultServeMux at import
+import _ "net/http/pprof"
+http.ListenAndServe(":8080", nil)              // nil = DefaultServeMux, pprof included
+
+// GOOD — a dedicated mux for the app; pprof only on a localhost-bound admin listener
+```
+
+Same class: `expvar` on the public mux, a public swagger route, leftover `/test`/`/debug` handlers. Delete or bind them to localhost — scaffolding that shipped has no safe version.
+
 ## Race conditions — HIGH
 
 ```go

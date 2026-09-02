@@ -126,6 +126,82 @@ Route::middleware('throttle:6,1')->group(function () {
 
 Throttle by identity *and* IP — `RateLimiter::for('login', fn ($r) => Limit::perMinute(6)->by($r->email . '|' . $r->ip()))`. Also cap upload size in the Form Request; a rate limit doesn't stop one huge body.
 
+## Missing object-level authorization (IDOR) — CRIT
+
+`auth` middleware is authentication, not authorization. Route model binding fetches any record whose id the caller can guess — nothing about it checks ownership.
+
+```php
+// BAD — any logged-in user can open any project by UUID
+Route::middleware('auth')->get('project/{project}', [ProjectController::class, 'show']);
+public function show(Project $project) { … }            // binding = find by id, nothing else
+
+// GOOD — pick one mechanism and use it on every resource route
+public function show(Project $project)
+{
+    $this->authorize('view', $project);                  // ProjectPolicy::view checks user_id
+    …
+}
+Route::get('project/{project}', …)->can('view', 'project');   // same policy, at the route
+
+// Or skip the binding and scope the query to the owner:
+$project = $request->user()->projects()->findOrFail($id);
+
+// Nested resources: scope the child binding to the parent
+Route::get('project/{project}/token/{token}', …)->scopeBindings();
+```
+
+Indirect access is the same bug: `campaign.show` reached via `$campaign->project` still needs the ownership check on the project. A `role` check does not fix IDOR — role gates *which class of user*, the policy gates *which row*. **Zero files in `app/Policies` plus zero `authorize()` calls in an app with per-user data is itself the finding** — one CRIT row for the app, not one per route.
+
+## Open registration — HIGH
+
+Laravel Breeze/Jetstream ship `/register` enabled; on an internal admin or multi-tenant CMS that is a door, and combined with the IDOR above it is the whole breach.
+
+```php
+// BAD — routes/auth.php left as scaffolded on an admin app
+Route::post('register', [RegisteredUserController::class, 'store']);   // creates user, auto-login
+
+// GOOD — remove the routes, or gate account activation
+// 1. No self-serve accounts: delete the register routes; admins create users.
+// 2. Registration needed: create disabled, no auto-login, admin approves.
+$user = User::create([...('is_approved' => false)...]);
+// and a middleware/gate that checks is_approved before anything else
+```
+
+New accounts must land on least privilege: an explicit low role, no default access to shared resources, and `throttle:` on the register route so accounts can't be minted in a loop.
+
+## Client headers as authorization — HIGH
+
+`Origin`, `Referer`, and `X-Forwarded-*` are written by the client. curl sets them to whatever it wants — a domain whitelist over them is CSRF hygiene at best, never authentication.
+
+```php
+// BAD — spoofable, and fails open
+$origin = $request->header('Origin') ?? $request->header('Referer');
+if ($whitelist->isEmpty()) return $next($request);       // no config = allow everyone
+
+// GOOD — a server-side credential per project, and fail closed
+Route::middleware('auth:sanctum')->post('…');            // or a per-project API key checked in middleware
+abort_if($whitelist->isEmpty(), 403);                    // unconfigured = deny
+```
+
+Report the fail-open branch as its own part of the finding — "backwards compatible" allow-all defaults are how the check quietly stops existing.
+
+## Debug & dev surface in production — HIGH
+
+```bash
+# ignition/telescope/horizon/debugbar in "require" instead of "require-dev" is the grep
+grep -n 'ignition\|telescope\|debugbar' composer.json
+grep -rn 'APP_DEBUG' .env.example
+```
+
+`APP_DEBUG=true` in production turns Ignition into an exploit path (`/_ignition/execute-solution`, `update-config`) — that's a config check, but the audit can flag the enablers: debug packages in `require`, no `viewTelescope`/`viewHorizon` gate override, an API-docs route (Scramble/Scribe `/docs/api.json`) whose gate is only `auth()->check()` — on a multi-tenant app that hands every self-registered user the full endpoint map. Leftover routes are the same class:
+
+```php
+// BAD — scaffolding that shipped
+Route::get('test', [TestController::class, 'index']);    // returns a whole model, no auth
+
+// GOOD — delete it; a "temporary" route has no safe version
+```
+
 ## Race conditions — HIGH
 
 Check-then-act on shared state: balance checks, coupon redemption, "first one wins" claims.

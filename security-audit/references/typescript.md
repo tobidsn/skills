@@ -120,6 +120,44 @@ app.use('/api/auth/', rateLimit({ windowMs: 15 * 60_000, max: 10 }));
 
 Behind a proxy, set `app.set('trust proxy', 1)` — otherwise every request looks like one IP and the limit is either useless or a global outage. Also cap body size: `express.json({ limit: '100kb' })`.
 
+## Missing object-level authorization (IDOR) — CRIT
+
+An auth middleware proves the caller is logged in, not that the row is theirs.
+
+```typescript
+// BAD — any authenticated user reads any project by id
+const project = await prisma.project.findUnique({ where: { id: req.params.id } });
+
+// GOOD — the owner is part of the query, not a comment
+const project = await prisma.project.findFirst({
+  where: { id: req.params.id, ownerId: req.user.id },
+});
+if (!project) throw new NotFoundError();      // 404, not 403 — don't confirm the id exists
+```
+
+The check has to sit on every resource route, including indirect loads (`campaign.projectId` → still verify the project's owner). A codebase with per-user data and zero ownership filters anywhere is one CRIT row for the app.
+
+## Open registration — HIGH
+
+A public `/register` or `/signup` handler that creates a user and issues a session, on an admin panel or multi-tenant dashboard, turns "logged in" into "anyone on the internet". Remove it, put it behind invite tokens, or create accounts disabled until approved — and rate-limit it either way. With NextAuth/Auth.js, an OAuth provider with no `signIn` callback allow-list is the same finding.
+
+## Client headers as authorization — HIGH
+
+```typescript
+// BAD — Origin/Referer are client-controlled; curl sends anything
+if (allowlist.includes(new URL(req.headers.origin).host)) return next();
+if (allowlist.length === 0) return next();     // fail-open: no config = allow all
+
+// GOOD — a server-side credential, and fail closed
+if (!apiKeyValid(req.headers['x-api-key'])) throw new UnauthorizedError();
+```
+
+CORS is a browser courtesy, not authentication — a permissive `cors()` mount is LOW, but an Origin check *standing in for* auth is HIGH.
+
+## Debug surface in production — HIGH
+
+Swagger UI / GraphQL playground / introspection reachable without auth hands out the endpoint map; a default error handler that returns `err.stack` leaks paths and internals. Gate docs behind auth *and* role (a check that any registered user passes is no gate on a multi-tenant app), set `introspection: false` in prod, and delete leftover `/test`/`/debug` routes — scaffolding that shipped has no safe version.
+
 ## Race conditions — HIGH
 
 ```typescript

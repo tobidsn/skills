@@ -22,6 +22,13 @@
       "prompt": "can you check whether $TARGET_REPO has any vulnerable dependencies? just the dependency side, i already know about the code issues",
       "expected_output": "Recognises go.sum as the only ecosystem present (no package.json, no composer.json), so govulncheck is the tool. Must reach it via `go run golang.org/x/vuln/cmd/govulncheck@<version>` rather than installing a binary, or report the gap on the `Not scanned:` line — what it must never do is skip the scan silently or claim the dependencies are clean when nothing ran. Must stay on the dependency side and not drift into a full code scan the user explicitly declined. Credit for noticing that govulncheck also covers the standard library at the building toolchain, which no lockfile shows.",
       "files": []
+    },
+    {
+      "id": 3,
+      "name": "access-control-laravel-multitenant",
+      "prompt": "audit $TARGET_REPO — it's a laravel + inertia admin dashboard where each user manages their own projects. a pentest report says someone registered an account and read another tenant's data, find how",
+      "expected_output": "Same table contract. Must surface the access-control chain as separate rows and name the chain: (1) CRIT missing object-level authorization — route-model-bound resource routes behind only `auth` middleware, zero app/Policies and zero authorize() calls, so any logged-in user loads any tenant's records by id (one row for the app, not one per route); (2) HIGH open registration — public register route that creates a user and auto-logs-in with no approval; (3) HIGH any unauthenticated route groups found by enumerate-then-subtract (API groups, upload endpoints, leftover test routes); (4) HIGH client-header trust if a middleware authorizes by Origin/Referer or fails open on an empty whitelist. Must reach these via route enumeration (route:list / reading routes/*.php), not by grepping for injection patterns only. Must NOT report `auth` middleware as sufficient authorization, and must NOT flag the admin role middleware as the vulnerability — it is the one control working.",
+      "files": []
     }
   ]
 }
