@@ -1,13 +1,17 @@
 ---
 name: security-audit
-description: Security audit, then optionally a fix plan and the fixes, each phase gated. Runs the project's own dependency audit (npm/pnpm/yarn/bun, `composer audit`, `govulncheck`) and greps the high-signal code classes: SQL and command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled writes, unbounded OTP attempts, race conditions. Use to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or set rate limits, OTP protections, and bot filtering for an endpoint. Phase one is one ranked `path:line` table and never an edit; code changes always wait for explicit approval. `audit auto` skips only the plan confirmation. `/security-audit report` renders the findings as a self-contained HTML assessment report for stakeholders. Manual only, never triggered by a phase.
+description: Security audit, then optionally a fix plan and the fixes, each phase gated. Runs the project's own dependency audit (npm/pnpm/yarn/bun, `composer audit`, `govulncheck`) and greps the high-signal code classes: SQL and command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled writes, unbounded OTP attempts, race conditions. Use to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or set rate limits, OTP protections, and bot filtering for an endpoint. Phase one is one ranked `path:line` table and never an edit; code changes always wait for explicit approval. `audit auto` skips only the plan confirmation. `/security-audit report` renders the findings as a self-contained HTML assessment report for stakeholders; `/security-audit issue` publishes them as one agent-grabbable spec issue on the project's GitHub/GitLab tracker; `/security-audit tickets` breaks the remediation into tracer-bullet tickets with blocking edges. All three are manual only, never triggered by a phase.
 ---
 
 # security-audit
 
 Three phases: **audit** → **plan** → **build**. Phase one is a table and nothing else; the later phases only happen when the human has said so.
 
-Alongside them sits one manual subcommand, `/security-audit report`, which renders the findings as an HTML assessment report for stakeholders. It is never triggered by a phase — see the section near the end.
+Alongside them sit three manual subcommands, never triggered by a phase — see the sections near the end:
+
+- `/security-audit report` — the findings as an HTML assessment report for stakeholders.
+- `/security-audit issue` — the findings as one spec-shaped issue on the project's tracker.
+- `/security-audit tickets` — the remediation as tracer-bullet tickets with blocking edges.
 
 ## Interactive or auto
 
@@ -210,6 +214,16 @@ Content comes from the audit run in this session; failing that, the newest `docs
 
 Read `references/report.md` before writing it — it carries the fill procedure, the severity and status mapping, and two mandatory guards. Both guards matter more than they look: the template ships with two **sample findings** that must be deleted, and `grep -n "SAMPLE\|{{"` on the finished file must come back empty. A surviving sample block delivers a fabricated critical to a client.
 
+## `/security-audit issue` and `/security-audit tickets` — the tracker
+
+Two more side doors, same rules as `report`: **only ever run when someone types them**, and content comes from the audit run in this session, else the newest plan file, else run the audit first. Read `references/issue.md` before either — it carries the repo/platform resolution (git remote → `gh` or `glab`), the fill procedures, and the publish commands.
+
+`issue` publishes **one spec-shaped issue** — Problem Statement / Solution / User Stories / Implementation Decisions / Testing Decisions / Out of Scope / Further Notes, labelled `ready-for-agent` — written so an agent or engineer can work the remediation without ever seeing the audit session. CRIT/HIGH drive the spec; MED/LOW are named in Out of Scope. No `path:line` in the body (it goes stale — the plan file carries the evidence and gets referenced instead).
+
+`tickets` breaks the remediation into **tracer-bullet vertical slices with blocking edges** — the fix-the-chain ordering from the plan *is* the dependency graph. The breakdown is shown as a numbered list and iterated until approved, then published blockers-first so edges reference real issue numbers. It references the spec issue as parent when one exists, and never closes or modifies it.
+
+**Publishing is outward-facing, so it always gates** — full draft shown, explicit yes, in every mode including auto. On a public repo, the confirm prompt must say the issue will be a public disclosure of the vulnerabilities.
+
 ## What this skill is not
 
 Not a threat-modeling framework, not a compliance/GDPR review, not a secrets-history scan, and not a fan-out of parallel audit agents. One pass, one table, then only what the human approves. If they want a design-level review, say so in a sentence and let them ask.
@@ -224,5 +238,6 @@ Loaded on demand, never all at once.
 - `references/rate-limits.md` — read when a throttling row fires, an OTP/verification flow is in scope, or a public endpoint costs money per request
 - `references/plan-template.md` — read only after the human approves a plan
 - `references/report.md` — read only on `/security-audit report`; it points at `assets/report-template.html`, which is copied and filled in place rather than read into context
+- `references/issue.md` — read only on `/security-audit issue` or `/security-audit tickets`; repo/platform resolution, the spec-issue and ticket templates, publish commands and gates
 
 The three language files are BAD/GOOD for the nine classes above; read one to write a fix, not to produce the table.
