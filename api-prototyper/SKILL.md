@@ -12,7 +12,7 @@ The prototype is the first draft of the real feature, not a throwaway: generate 
 ## Workflow
 
 ### 1. Gather the contract
-Inputs may be any mix of: prompt, screenshots (read the image), API docs as file or URL (fetch it), OpenAPI/Swagger spec, Postman collection, example JSON. Docs and screenshots are the source of truth; infer missing details but keep every inference visible in the table below.
+Inputs may be any mix of: prompt, screenshots (read the image), API docs as file or URL (fetch it), OpenAPI/Swagger spec, Postman collection, example JSON. Docs and screenshots are the source of truth; infer missing details but keep every inference visible in the table below. When a design's numbers contradict each other (a total that doesn't equal price × duration, a count that doesn't match the list), choose internal consistency in the API and flag the contradiction to the user — copying broken arithmetic gives the frontend a contract that can't be computed.
 
 ### 2. Read the codebase
 Detect stack and conventions from what exists: framework, route registration, validation idiom, response envelope, naming, test runner, linter config. Match them — output should look like a teammate wrote it. Empty/greenfield directory: ask the user once which stack; never guess a framework into an empty folder.
@@ -28,6 +28,7 @@ Before writing code, present one table and wait for approval — the cheapest pl
 - Dummy data hardcoded in the handler — static canned responses, no in-memory store.
 - Writes return canned success: echo the validated payload + fake id/timestamps so the frontend can render what it submitted.
 - Validation is real — bad input must fail in the stack's normal error shape; that's part of the contract.
+- List filters (search, location, dates, price bounds) default to **optional**: a bare GET must return data, because the first thing anyone does is open the URL in a browser. Make a filter required only when the inputs say so, and flag it as a product decision in the table.
 - Lists: 5–10 realistic items, stable ids. Realistic values beat `"string"` placeholders.
 - Image fields: `https://picsum.photos/seed/<id>/600/400` (seeded, stable per record) or `https://placehold.co/600x400`.
 - Never create: models, migrations, repositories, database queries/config, external API calls. Must run with zero database setup.
@@ -36,9 +37,10 @@ Before writing code, present one table and wait for approval — the cheapest pl
 - Happy-path tests only, one per endpoint, in the codebase's runner and style: status code + response shape. No edge cases, error branches, or auth flows.
 - Run them and confirm each new test appears **by name in verbose output** — runners discover tests by naming convention (Go `Test` prefix, PHPUnit `test`), and a misnamed test silently never runs while the suite stays green.
 - Run the project's existing linter/static analysis if configured (golangci-lint, pint/phpstan, eslint/biome, …) on the new files and fix what it flags. Don't install a linter the project doesn't have.
+- Verify the way the consumer will consume, not just curl: a browser sends large cookie-laden headers on localhost and opens bare URLs first, and a frontend on another origin needs CORS. If the server rejects browser-shaped requests (e.g. a small header-size buffer → 431) or lacks CORS middleware the project already ships, surface it — the mock exists for frontend integration.
 
 ### 6. Hand off
-Reply with the exact run command, base URL, sample curl per endpoint, and endpoint list. No README/docs files — the table lives in the conversation, the tests are the durable contract. Leave generated files uncommitted; never `git add` or commit them.
+Reply with the exact run command, base URL, sample curl per endpoint, and endpoint list. The run command must work as pasted: if the app needs env vars to boot (no `.env` in the repo), inline the minimal set in the command itself. No README/docs files — the table lives in the conversation, the tests are the durable contract. Leave generated files uncommitted; never `git add` or commit them.
 
 ## Scope discipline
 In: routes, methods, params/body, validation, response shapes, dummy data, happy-path tests.
