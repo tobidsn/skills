@@ -1,0 +1,23 @@
+{
+  "skill_name": "api-prototyper",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "In /Users/tobi/Sites/yamaha/yamaha-golang-api — generate api: user submit simple order with 2 body request. mock/dummy API only, no database, frontend needs it for integration.",
+      "expected_output": "A POST order endpoint wired into the existing Go project following its routing/handler/response conventions, real validation on the 2 body fields, canned success response echoing the payload with a fake id, a happy-path test in the project's test style, and the exact run command. No DB, models, migrations, or repositories.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "our mobile FE dev sent the example response they expect:\n{\"success\":true,\"data\":{\"id\":\"u_1\",\"name\":\"Sari\",\"avatar_url\":\"...\",\"orders_count\":3}}\nbikin mock API yang balikin bentuk ini — GET /api/me plus GET /api/me/orders (list). dummy data aja, no DB.",
+      "expected_output": "Two GET endpoints matching the example envelope exactly, 5-10 realistic dummy orders with seeded picsum image URLs where relevant, happy-path tests, runnable with zero database config.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "prototype this API: blog posts for the new marketing site — GET /api/posts (paginated), GET /api/posts/{slug}, POST /api/posts (title, body, tags). FE starts tomorrow, mock only, no database.",
+      "expected_output": "Endpoint table presented first (with inferred cells marked), then production-shaped routes/handlers with hardcoded realistic dummy posts, real validation on POST, fixed pagination meta, happy-path tests per endpoint.",
+      "files": []
+    }
+  ]
+}
