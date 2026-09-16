@@ -37,6 +37,8 @@ Order these the way the work happened; a chronological list snaps back into plac
 
 **Next Actions** — imperative, specific, verb-first. Put the thing in flight first, and if it is stuck, name the blocker on the same line: "blocked" plus a reason beats "in progress". Someone picks these up cold, so "fix auth" fails and "key the limiter off the token ID instead of `auth()->id()`" works.
 
+When the coding is finished — everything asked for landed and its checks passed — Next Actions does not go empty: it closes with a smoke test or a human review. **One bullet per module touched**, not one blanket line: a session that changed checkout and the rate limiter gets `Smoke-test checkout end to end — php artisan serve, then POST /api/orders` *and* `Have a human review the limiter keying before merge — app/Http/Middleware/RateLimit.php`, each anchored to its own entry point. A single "smoke-test everything" bullet is unactionable and one module's pass hides another's failure. These share the normal budget of 3 — if more modules changed than fit, keep the riskiest ones. Code that passed its own tests has still only been checked by the person who wrote it.
+
 ## Anchors
 
 Every bullet, in both sections, anchors to something openable: a file path, a command, an endpoint, a PR number. Use `path/to/file.ts:42` when a specific line is the point — it is clickable in the terminal. Next Actions anchor to where the work goes rather than where it has been: the file to edit, the test to run, the doc to update.
