@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Security audit, then optionally a fix plan and the fixes, each phase gated. Runs the project's own dependency audit (npm/pnpm/yarn/bun, `composer audit`, `govulncheck`) and greps the high-signal code classes: SQL and command injection, XSS, path traversal, weak crypto, TLS and header gaps, unthrottled writes, unbounded OTP attempts, race conditions, missing object-level authorization (IDOR), open registration, client-header trust, and debug tooling exposed in production. Use to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or set rate limits, OTP protections, and bot filtering for an endpoint. Phase one is one ranked `path:line` table and never an edit; code changes always wait for explicit approval. `audit auto` skips only the plan confirmation. `/security-audit report` renders the findings as a self-contained HTML assessment report for stakeholders (manual only); `/security-audit issue` publishes them as one agent-grabbable spec issue on the project's GitHub/GitLab tracker — also offered at the post-audit gate as the tracker-shaped alternative to the plan file; `/security-audit tickets` breaks the remediation into tracer-bullet tickets with blocking edges — also offered once after an issue publishes. Publishing to the tracker always shows the full draft and waits for an explicit yes.
+description: Security audit, then optionally a fix plan and the fixes, each phase gated. Runs the project's own dependency audit (npm/pnpm/yarn/bun, `composer audit`, `govulncheck`) and greps the high-signal code classes: SQL and command injection, XSS, path traversal, destructive file targets, SSRF, weak crypto, hardcoded secrets, over-serialized responses, session-cookie and CORS and header gaps, unthrottled writes, unbounded OTP attempts, short-lived-token lifetime, race conditions, missing object-level authorization (IDOR), open registration, client-header trust, debug tooling and error detail exposed in production, install-script and lockfile supply-chain gaps, personal-data retention and deletion paths, and untrusted LLM output. Use to audit security, scan dependencies for CVEs, check for vulnerabilities, harden a service before handover, review a diff for security problems, or set rate limits, OTP protections, and bot filtering for an endpoint. Phase one is one ranked `path:line` table and never an edit; code changes always wait for explicit approval. `audit auto` skips only the plan confirmation. `/security-audit report` renders the findings as a self-contained HTML assessment report for stakeholders (manual only); `/security-audit issue` publishes them as one agent-grabbable spec issue on the project's GitHub/GitLab tracker — also offered at the post-audit gate as the tracker-shaped alternative to the plan file; `/security-audit tickets` breaks the remediation into tracer-bullet tickets with blocking edges — also offered once after an issue publishes. Publishing to the tracker always shows the full draft and waits for an explicit yes.
 ---
 
 # security-audit
@@ -77,6 +77,14 @@ ls package-lock.json pnpm-lock.yaml yarn.lock bun.lock bun.lockb composer.lock g
 | `package.json` | `references/typescript.md` | the Node-family audit for its lockfile |
 | `go.mod` | `references/go.md` | `govulncheck` |
 
+One more grep in the same pass, because it decides whether a fourth reference applies:
+
+```bash
+grep -rniE "anthropic|openai|@ai-sdk|langchain|bedrock|vertexai|ollama" composer.json package.json go.mod 2>/dev/null
+```
+
+A hit means the app calls a model, so `references/ai.md` is in scope. No hit, no file — same rule as the language ones.
+
 **Load only the files that matched.** A Go service reads `go.md` and nothing else. Never read all three — that is the whole reason they're split.
 
 **A project can match more than one, and usually does.** A Laravel app with a Vite/Inertia frontend has `composer.json` *and* `package.json`: run **both** audits, read **both** reference files, and merge everything into the single output table. Same for a Go service with an embedded JS admin panel.
@@ -119,6 +127,27 @@ Then triage — advisory count is not the finding, reachability is:
 
 An unreachable critical is a MED row, not a CRIT row. Say why in `Fix`: `dev-only`, `unreachable`.
 
+### Three supply-chain checks the advisory list does not make
+
+An audit that reports zero advisories still misses the way most real compromises arrive — through the install, not through a CVE.
+
+- **Does CI install from the lockfile?** A committed lockfile means nothing if the pipeline runs `npm install`, `composer update`, or `yarn` — any of those may resolve a newer version than the one you audited, so the audit describes a build that never shipped. Grep the workflow and report a MED row when it doesn't pin: `npm ci`, `pnpm install --frozen-lockfile`, `yarn install --immutable`, `composer install` (never `update`).
+
+  ```bash
+  grep -rnE "npm (ci|install)|pnpm install|yarn install|composer (install|update)" .github/ .gitlab-ci.yml Dockerfile 2>/dev/null
+  ```
+
+- **Do install scripts run?** `postinstall` executes arbitrary code at install time with the developer's credentials, on every machine and every CI runner — the standard payload delivery for a hijacked package. A repo with no `ignore-scripts` setting runs them all. MED, or HIGH when CI holds deploy credentials: set `ignore-scripts=true` in `.npmrc` (pnpm: `enable-pre-post-scripts=false`) and allowlist the few packages that genuinely need a build step.
+
+- **Is a newly added dependency worth trusting?** Only when the audit scope is a diff that adds one. Check ownership and provenance (repo linked from the registry page, publisher matches), release age (a version hours old, or a package whose only release is recent, is the typosquat shape), and what it drags in transitively. A five-line utility with forty transitive dependencies is a finding even when every one of them is clean today.
+
+  ```bash
+  npm view <pkg> repository.url maintainers time.modified dist-tags
+  composer show <vendor/pkg> --all | sed -n '/source\|versions/p'
+  ```
+
+None of the three has a CVE, so none appears in the audit output unless you look. When they're clean, say nothing; when the scope was a diff that added no dependencies, skip the third entirely.
+
 ## Scanning code
 
 Default target is the working diff (`git diff --name-only` plus staged); a path argument overrides it. On "audit the whole project", scope to the app source dirs and skip `vendor/`, `node_modules/`, `dist/`, generated code.
@@ -133,9 +162,17 @@ Signals are tagged by language — **run only the tags you detected.** A Go-only
 | CRIT | Command injection | `php:` `shell_exec\|passthru\|proc_open\|system\(` · `ts:` `child_process\.exec\(` , `shell:\s*true` · `go:` `exec.Command\("(sh\|bash)", "-c"` | pass args separately |
 | HIGH | XSS | `php:` `{!! !!}` · `ts:` `innerHTML\|dangerouslySetInnerHTML\|v-html` · `go:` `"text/template"` import in a web handler, `template.HTML\(` | auto-escape / sanitize |
 | HIGH | Path traversal | `php:` request input reaching `file_get_contents\|fopen\|include` · `ts:` `path.join\(` with `req\.` · `go:` `filepath.Join` with user input | `os.Root` (Go 1.24+) / resolve + prefix check |
+| HIGH | Destructive file target | a delete/move/overwrite path built from request or DB data: `php:` `Storage::delete\|unlink\|rename\|->move\(` · `ts:` `fs.rm\|fs.unlink\|fs.rename` · `go:` `os.Remove\(\|os.RemoveAll\|os.Rename` | allowlisted root + minimum depth + ownership read before the call |
+| CRIT | SSRF | a fetch whose URL comes from input: `php:` `Http::(get\|post)\|curl_setopt.*CURLOPT_URL` with `$request` · `ts:` `fetch\(\|axios\.` with `req\.` · `go:` `http.(Get\|Post)\|http.NewRequest` with a request-derived URL | allowlist hosts, block link-local/metadata/private ranges, no redirect following |
+| CRIT | Hardcoded secret | a literal key, token, password, or DSN in source or a committed `.env`: `(secret\|token\|api_?key\|password\|dsn)\s*[:=]\s*["'][A-Za-z0-9_\-/+]{16,}` , `sk-\|AKIA\|-----BEGIN .*PRIVATE KEY` | move to env **and rotate** — the literal is already leaked |
+| HIGH | Over-serialized response | a model or row returned whole: `php:` model/collection returned from a controller with no Resource and no `$hidden` · `ts:` `findMany()`/`findUnique()` with no `select` reaching the response · `go:` struct returned with no `json:"-"` on the secret fields | explicit field list |
 | HIGH | Weak crypto / RNG | `php:` `md5\(\|sha1\(` on passwords, `mt_rand` · `ts:` `Math.random` for tokens · `go:` `"math/rand"` for tokens · all: `==`/`===` comparing secrets | argon2id/bcrypt · CSPRNG · constant-time compare |
 | MED | TLS disabled | `php:` `withoutVerifying\|'verify'\s*=>\s*false` · `ts:` `rejectUnauthorized:\s*false` , `NODE_TLS_REJECT_UNAUTHORIZED` · `go:` `InsecureSkipVerify:\s*true` | remove the override, pin the CA |
 | HIGH | Unbounded verify attempts | OTP/2FA/reset verify with no cap on *wrong* guesses — a request-rate limiter alone does not count failures | 3 failures / 15 min per identity |
+| HIGH | Short-lived token that isn't | a password-reset / invite / magic-link token with no expiry column or check, reusable after redemption, or stored in plaintext | expire ≤ 60 min, single-use, hashed at rest |
+| MED | Session cookie flags | the session/cookie config with `httpOnly`, `secure`, or `sameSite` unset or false — `php:` `config/session.php` · `ts:` the session/cookie options object · `go:` every `http.Cookie` literal | all three set; `secure` true in prod |
+| MED | CORS too wide | `*` origin together with credentials, or an origin reflected back from the request | allowlist known origins; never reflect |
+| MED | Error detail in responses | debug on in a production config, or a handler returning a stack trace / driver error / `err.Error()` to the client | generic message to the client, detail to the log |
 | MED | Unthrottled public write | public `POST\|PUT\|PATCH\|DELETE` with no `php:` `throttle:` · `ts:` `express-rate-limit`, `@Throttle` · `go:` `x/time/rate` — and no server timeouts | throttle the write surface |
 | HIGH | Race condition | `php:` check-then-act with no `lockForUpdate\(\)\|Cache::lock` · `ts:` read-modify-write across an `await`, no transaction · `go:` shared map/counter across goroutines | row lock / mutex / atomic |
 | CRIT | Missing object-level authz (IDOR) | `php:` implicit binding / `find($id)` in a controller with zero `authorize\|->can\|Policy` and no owner scope · `ts:` `findUnique({ where: { id: req.params… } })` with no user filter · `go:` DB fetch by URL id with no owner column in the `WHERE` | scope query to owner / policy |
@@ -144,6 +181,7 @@ Signals are tagged by language — **run only the tags you detected.** A Go-only
 | HIGH | Client header as authz | `Origin\|Referer\|X-Forwarded-` read to *grant* access, or a whitelist that passes when empty | server-side credential; fail closed |
 | HIGH | Debug surface in prod | `php:` ignition/telescope/horizon in `require` (not `require-dev`), docs route gated only by `auth()->check()` · `ts:` public swagger/GraphQL playground, verbose error handler · `go:` `net/http/pprof` import on the main mux | gate, remove, move to dev deps |
 | LOW | Missing headers | zero hits app-wide for `helmet\|Content-Security-Policy\|Strict-Transport-Security` | security-headers middleware |
+| CRIT | Model output as code | `ai:` a completion reaching `eval\|exec\|innerHTML\|dangerouslySetInnerHTML`, a raw SQL call, or a shell — read `references/ai.md` | treat the completion as untrusted input |
 
 Races in Go need a command, not a grep — `go test -race ./...` (findings only from paths the tests exercise).
 
@@ -157,6 +195,16 @@ grep -rEn "\.(post|put|patch|delete)\(" src/    # Express/Nest: compare against 
 ```
 
 **The same subtraction finds the two authorization absences.** First pass, endpoint auth: from the route list, which routes have no auth middleware at all — API groups, upload endpoints, exports, leftover `test`/`debug` routes? Each unauthenticated route that touches data is its own row. Second pass, object-level auth: `auth` on every route proves the caller is *logged in*, not that they're *allowed* — for each route that loads a record by a URL id, check that something ties the record to the caller (a policy, an `authorize()` call, or an owner-scoped query). An app with route model binding everywhere, an owner relation on the model, and zero policies is one CRIT row: any registered user can read every tenant's data by guessing ids. An open `register` endpoint next to that IDOR upgrades "logged in" to "anyone on the internet" — report both rows and name the chain in `Fix`.
+
+**The config absences need the same treatment, and each one has a single file to open.** Session cookie flags, CORS, and error detail are never found by grepping for the good value — a project with no `sameSite` anywhere has zero hits, exactly like a project that sets it correctly. Open the config and read it:
+
+```bash
+sed -n '/http_only\|same_site\|secure/p' config/session.php   # Laravel
+grep -rn "cookie\|session(" src/**/*.ts | grep -i "httponly\|samesite\|secure"
+grep -rn "http.Cookie{" --include=*.go .                       # every literal, not the first
+```
+
+Report one row per absent flag class, app-wide, not per call site. A single `http.Cookie` literal missing `HttpOnly` among ten correct ones is still the finding — it only takes one session cookie readable from JS.
 
 When either throttling row fires, or the endpoint is public and costs money per request (SMS, email, a paid API), read `references/rate-limits.md`: the recommended limits and how to key them, the four controls an OTP flow needs, and how to pick a bot filter by client type — Turnstile for web, attestation for mobile apps. Don't invent limits from memory, and don't name a bot filter before you know whether the client is a browser or an app: an OTP cap guessed wrong is either someone's SMS bill or a locked-out user base, and "add reCAPTCHA" to a mobile-only API is the wrong fix at the wrong layer.
 
@@ -174,6 +222,27 @@ grep -rn "password_hash\|PASSWORD_" vendor/<vendor>/<pkg>/
 What to check once you're there: bcrypt cost (`MinCost` is **4**; the default is 10 and below ~10 is a HIGH finding), argon2 memory/time parameters, AES mode (GCM vs bare CBC/ECB), and whether the RNG is the crypto one. A helper named `Bcrypt` calling `GenerateFromPassword(pw, bcrypt.MinCost)` passes every grep in the table above and is still a real finding.
 
 This generalizes past hashing: a name that matches the GOOD column is a reason to look closer, never a reason to stop. Report the finding at the wrapper's own `path:line` and note in `Fix` when it's upstream and cannot be changed in-repo.
+
+## Personal data — only when the schema holds it
+
+Skip this whole section when it doesn't: a build tool, a CLI, a stateless API over public data has no personal data and gets no rows. Otherwise the trigger is the schema, so start there — migrations or DDL, not controllers:
+
+```bash
+grep -rniE "email|phone|nik|ktp|passport|address|dob|birth|gender|latitude|id_?card|npwp|bank_?account" database/migrations/ migrations/ prisma/schema.prisma 2>/dev/null
+```
+
+What is worth a row is what the code can actually answer. Four classes, each one an absence:
+
+| Sev | Class | What makes it a finding |
+|---|---|---|
+| HIGH | Sensitive field stored in the clear | a government id, bank account, precise location, or health field as a plain column with no application-layer encryption (`encrypted` cast, `pgcrypto`, a KMS envelope) — disk encryption is not this control, it only protects a stolen disk |
+| MED | No retention limit | a table that accumulates personal data forever with no pruning job, no `deleted_at` sweep, no TTL — logs of request bodies and OTP tables are the usual offenders |
+| MED | Deletion doesn't delete | an account-delete path that soft-deletes the user and leaves the personal columns populated, or leaves copies in a search index, a cache, an export bucket, or an analytics sink |
+| LOW | No export path | no way to produce a user's own data on request, where the jurisdiction or the contract requires one |
+
+Two rules keep this from turning into a compliance essay. **Collection purpose and minimization are a product question, not a code question** — if a table collects a field nothing reads, name it in one row (`collected, never read`) and stop; do not draft a data-processing register. And **third-party sharing is a finding only when the code does it**: an SDK, a webhook, or an analytics call shipping personal fields to a vendor is a row at that `path:line`; the consent decision behind it is the human's.
+
+Backups deserve one sentence in `Fix` when a deletion row fires — a delete path that the nightly dump restores over is not a delete path — but do not go auditing backup infrastructure. Say it, and let the plan carry it.
 
 ## Gate 1: ask where the findings go
 
@@ -238,7 +307,7 @@ Two entry points: typed directly, or chosen when a gate offers them (`issue` at 
 
 ## What this skill is not
 
-Not a threat-modeling framework, not a compliance/GDPR review, not a secrets-history scan, and not a fan-out of parallel audit agents. One pass, one table, then only what the human approves. If they want a design-level review, say so in a sentence and let them ask.
+Not a threat-modeling framework, not a fan-out of parallel audit agents, and not a secrets-history scan — a literal in the working tree is a row, but nobody is walking every commit for one; say so on the `Not scanned:` line when it matters. Not a compliance review either: the personal-data section reports what the schema and the code show, and stops short of a lawful-basis assessment, a processing register, or a DPIA. One pass, one table, then only what the human approves. If they want a design-level review, say so in a sentence and let them ask.
 
 ## Files
 
@@ -247,9 +316,10 @@ Loaded on demand, never all at once.
 - `references/php.md` — read when `composer.json` exists
 - `references/typescript.md` — read when `package.json` exists
 - `references/go.md` — read when `go.mod` exists
-- `references/rate-limits.md` — read when a throttling row fires, an OTP/verification flow is in scope, or a public endpoint costs money per request
+- `references/ai.md` — read when the manifest grep found an LLM SDK
+- `references/rate-limits.md` — read when a throttling row fires, an OTP/verification flow is in scope, a reset/invite/magic-link token is in scope, or a public endpoint costs money per request
 - `references/plan-template.md` — read only after the human approves a plan
 - `references/report.md` — read only on `/security-audit report`; it points at `assets/report-template.html`, which is copied and filled in place rather than read into context
 - `references/issue.md` — read only on `/security-audit issue` or `/security-audit tickets`; repo/platform resolution, the spec-issue and ticket templates, publish commands and gates
 
-The three language files are BAD/GOOD for the nine classes above; read one to write a fix, not to produce the table.
+The three language files are BAD/GOOD for the code classes above; read one to write a fix, not to produce the table.

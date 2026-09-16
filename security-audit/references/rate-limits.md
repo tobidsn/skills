@@ -1,6 +1,6 @@
-# Rate limits, OTP, and bot filtering
+# Rate limits, OTP, tokens, and bot filtering
 
-Read this when a run turns up an unthrottled write endpoint, an OTP or verification flow, or a public endpoint that costs money per request. It carries the numbers and the reasoning; the findings table only needs the row.
+Read this when a run turns up an unthrottled write endpoint, an OTP or verification flow, a password-reset / invite / magic-link token, or a public endpoint that costs money per request. It carries the numbers and the reasoning; the findings table only needs the row.
 
 ## Two finding classes, not one
 
@@ -79,6 +79,19 @@ if (RateLimiter::hit($failKey, 900) >= 3) {          // 3 wrong codes / 15 min
 // …and on a successful verify
 RateLimiter::clear('otp_verify_fail:'.$request->phone_number);
 ```
+
+## Reset, invite, and magic-link tokens
+
+Same shape as an OTP, different failure mode: these are long random strings, so guessing is not the threat — **lifetime and reuse** are. Four properties, and each absence is its own row:
+
+| Property | What it should be | Why the absence is a finding |
+|---|---|---|
+| **Expiry** | ≤ 60 min for reset, ≤ 7 days for invite — checked at redemption, not only set at issue | A token with an `expires_at` column that nothing compares against is decoration. Grep the redeem handler, not the migration. |
+| **Single-use** | marked used inside the same transaction that redeems it | Without it, a link sitting in a mailbox, a browser history, or a forwarded email stays a working credential forever. |
+| **Hashed at rest** | store `hash('sha256', $token)`, mail the plaintext once | Read access to the table — a backup, a SQL injection, an over-serialized admin endpoint — is otherwise account takeover for every pending token. |
+| **Invalidated on use** | all of the user's other outstanding tokens dropped when one redeems, and on password change | An attacker who triggered a reset earlier still holds a live token after the real user recovers. |
+
+Laravel's `password_reset_tokens` gets the first three right by default (`Password::createToken` hashes, `expire` in `config/auth.php` is checked at redemption) — the findings are almost always in a **hand-rolled** reset or invite flow, so check whether the project uses the framework's broker before writing a row. Rate-limit the *request* side too, from the table above.
 
 ### The Laravel stacked-limit trap
 

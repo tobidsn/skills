@@ -62,6 +62,30 @@ full := filepath.Join(uploadsDir, name)
 
 Never `filepath.Clean` + `strings.HasPrefix` alone — it misses symlinks and the `/rootfoo` vs `/root/foo` boundary. On archive extraction, cap decompressed size (`io.LimitReader`) and reject traversing entry names.
 
+### Destructive targets need two more checks — HIGH
+
+`os.RemoveAll` is the one that turns a path bug into an outage. When the path feeds `os.Remove`, `os.RemoveAll`, or `os.Rename`, containment is necessary and not sufficient:
+
+```go
+// BAD — path from the DB, ownership never established
+os.RemoveAll(filepath.Join(uploadsDir, project.Folder))
+
+// GOOD
+var project Project
+if err := db.Where("id = ? AND owner_id = ?", id, userID).First(&project).Error; err != nil {
+    return errNotFound                                   // ownership read before the delete
+}
+if project.Folder == "" || !strings.Contains(project.Folder, "/") {
+    return errBadPath                                    // depth floor: never the root
+}
+root, err := os.OpenRoot(uploadsDir)                     // Go 1.24+
+if err != nil { return err }
+defer root.Close()
+return root.RemoveAll(project.Folder)
+```
+
+`os.RemoveAll("")` returns nil and deletes nothing, but `filepath.Join(uploadsDir, "")` is `uploadsDir` — so an empty column deletes the entire uploads tree and reports success. The depth floor is what catches it, and `os.Root` keeps the operation inside the tree even through a symlink.
+
 ## Weak crypto / RNG — HIGH
 
 ```go
@@ -111,6 +135,64 @@ pool.AppendCertsFromPEM(caPEM)
 ```
 
 Always set `MinVersion` explicitly — an unset `MinVersion` is a separate LOW finding.
+
+## SSRF — CRIT
+
+```go
+// BAD
+resp, err := http.Get(r.FormValue("url"))
+
+// GOOD — allowlist the host, and refuse to be redirected off it
+u, err := url.Parse(r.FormValue("url"))
+if err != nil || u.Scheme != "https" || !allowedHosts[u.Hostname()] {
+    http.Error(w, "host not allowed", http.StatusUnprocessableEntity)
+    return
+}
+client := &http.Client{
+    Timeout:       5 * time.Second,
+    CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+}
+resp, err := client.Get(u.String())
+```
+
+Go's default client follows up to 10 redirects, so an allowlisted host can bounce the request to `169.254.169.254` — `CheckRedirect` is the control, not an optimization. The default client also has **no timeout at all**, which makes an SSRF finding a resource-exhaustion finding at the same time. For a hard guarantee, deny private destinations at dial time rather than at parse time, which also closes DNS rebinding:
+
+```go
+Control: func(network, address string, _ syscall.RawConn) error {
+    host, _, _ := net.SplitHostPort(address)          // the IP actually being dialled
+    if ip := net.ParseIP(host); ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+        return errBlocked
+    }
+    return nil
+}
+```
+
+## Secrets in responses — HIGH
+
+```go
+// BAD — json.Marshal takes every exported field
+type User struct {
+    ID           int
+    Email        string
+    PasswordHash string
+    APIToken     string
+}
+json.NewEncoder(w).Encode(user)
+
+// GOOD — the tag is the contract
+type User struct {
+    ID           int    `json:"id"`
+    Email        string `json:"email"`
+    PasswordHash string `json:"-"`
+    APIToken     string `json:"-"`
+}
+```
+
+An exported field with no tag serializes under its Go name — the absence of a tag is the finding, not a wrong tag. Grep the structs that reach an encoder and read every field; the failure mode is a field added to the model months later that silently joins the response. A separate response struct is sturdier than tags, because adding a column to the DB model then cannot change the API.
+
+## CORS — MED
+
+`AllowedOrigins: []string{"*"}` with `AllowCredentials: true`, or a handler echoing `r.Header.Get("Origin")` straight into `Access-Control-Allow-Origin`, is the finding. List the origins. CORS is a browser policy, never authorization — it does not stop the request, only the page's ability to read the reply.
 
 ## Rate limiting — MED
 

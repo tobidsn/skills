@@ -70,6 +70,26 @@ await fs.promises.readFile(full);
 
 `path.join` does not stop `../` — `path.resolve` plus the prefix check does. The trailing `path.sep` is what stops `/uploadsfoo` passing as `/uploads`. `express.static` with `dotfiles: 'allow'` re-opens it.
 
+### Destructive targets need two more checks — HIGH
+
+A wrong read leaks one file; a wrong `fs.rm(dir, { recursive: true })` takes the volume. When the path feeds `rm`, `unlink`, `rename`, or a move, the prefix check is necessary and not sufficient:
+
+```typescript
+// BAD — path from the DB, ownership never checked
+await fs.promises.rm(path.join(UPLOADS, project.folder), { recursive: true, force: true });
+
+// GOOD
+const project = await db.project.findFirst({ where: { id, ownerId: user.id } });   // ownership first
+if (!project) throw new NotFoundError();
+
+const target = path.resolve(UPLOADS, project.folder);
+if (!target.startsWith(UPLOADS + path.sep)) throw new ForbiddenError();
+if (path.relative(UPLOADS, target).split(path.sep).length < 2) throw new ForbiddenError();  // depth floor
+await fs.promises.rm(target, { recursive: true });                                  // no `force`
+```
+
+`force: true` is what turns "the column was empty, so we resolved to the root" from a crash into a data-loss event — drop it and let the missing path throw. The depth floor is the check people skip, and it is the one that stops an empty or `.`-valued field.
+
 ## Weak crypto / RNG — HIGH
 
 ```typescript
@@ -108,6 +128,42 @@ new https.Agent({ ca: fs.readFileSync('internal-ca.pem') });
 ```
 
 `NODE_TLS_REJECT_UNAUTHORIZED=0` disables verification process-wide, including calls you didn't write. Check `.env`, Dockerfiles, and CI config, not just source.
+
+## SSRF — CRIT
+
+```typescript
+// BAD
+const preview = await fetch(req.body.url).then(r => r.text());
+
+// GOOD — allowlist the host, refuse redirects, bound the time
+const { hostname, protocol } = new URL(req.body.url);
+if (protocol !== 'https:' || !ALLOWED_HOSTS.has(hostname)) throw new ValidationError('host not allowed');
+
+const { address } = await dns.promises.lookup(hostname);
+if (ip.isPrivate(address) || ip.isLoopback(address)) throw new ValidationError('host not allowed');
+
+await fetch(req.body.url, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
+```
+
+`redirect: 'manual'` is the line people leave out: `fetch` follows by default, so an allowlisted host can 302 the request to `169.254.169.254` and hand back cloud credentials. Also check the scheme — `new URL('file:///etc/passwd')` parses fine — and note that the address you resolved is not necessarily the one the socket connects to (DNS rebinding). A blocklist of `localhost`/`127.0.0.1` misses `0.0.0.0`, `[::1]`, `2130706433`, and any hostname whose A record you control.
+
+Next.js `/api/proxy` routes, image optimizers with an unrestricted `remotePatterns`, webhook registration, and SSR fetches from a user-supplied URL are where this shows up.
+
+## Secrets in responses — HIGH
+
+```typescript
+// BAD — every column, including the ones added after this line was written
+const user = await prisma.user.findUnique({ where: { id } });
+res.json(user);                                   // passwordHash, resetToken, stripeCustomerId…
+
+// GOOD — the field list is the contract
+res.json(await prisma.user.findUnique({
+  where: { id },
+  select: { id: true, name: true, avatarUrl: true },
+}));
+```
+
+A Prisma query with no `select`/`omit` reaching a response is the whole finding — grep `res.json(` and the return of a route handler back to the query. Prisma's `omit` in the client config (`omit: { user: { passwordHash: true } }`) is a good backstop but not the control, same as `$hidden` in Laravel. Server Components and server actions count: whatever a component returns to the client is serialized into the payload and is readable in view-source, `select` or no `select`.
 
 ## Rate limiting — MED
 

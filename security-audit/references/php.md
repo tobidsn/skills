@@ -71,6 +71,24 @@ return response()->file($path);
 
 `realpath` before the prefix check is what closes the symlink hole, and the trailing separator is what stops `/uploadsfoo` from passing as `/uploads`. On archive extraction, cap the decompressed size and reject entries whose names traverse.
 
+### Destructive targets need two more checks — HIGH
+
+A read served from the wrong path leaks one file; a `Storage::deleteDirectory()` on the wrong path takes the bucket. When the path feeds `unlink`, `Storage::delete`, `deleteDirectory`, `rename`, or a move, the prefix check above is necessary and not sufficient:
+
+```php
+// BAD — path from the DB, and the row was never checked against the caller
+Storage::disk('public')->deleteDirectory($project->folder);
+
+// GOOD
+$folder = trim($project->folder, '/');
+abort_if($folder === '' || substr_count($folder, '/') < 1, 422);   // depth floor: never the root
+abort_unless($project->user_id === $user->id, 403);                 // ownership, read before the delete
+abort_unless(Storage::disk('public')->exists($folder), 404);
+Storage::disk('public')->deleteDirectory('projects/'.$folder);      // root prefixed here, not by the data
+```
+
+`realpath` returns `false` for a path that no longer exists, so a delete built on it silently degrades to the root — that is the whole bug in one line. The depth floor and the hardcoded root prefix are what stop an empty or `.`-valued column from resolving to "everything".
+
 ## Weak crypto / RNG — HIGH
 
 ```php
@@ -113,6 +131,52 @@ $client = new Client(['verify' => '/path/to/internal-ca.pem']);
 ```
 
 Almost always left over from debugging a self-signed cert in staging.
+
+## SSRF — CRIT
+
+The server is inside the network the caller is not. A fetch whose URL comes from input turns your app into a proxy for the metadata endpoint, the internal admin panel, and every service that trusts its own subnet.
+
+```php
+// BAD
+$preview = Http::get($request->input('url'))->body();
+$image = file_get_contents($request->avatar_url);
+
+// GOOD — allowlist the host, and refuse to be redirected off it
+$host = parse_url($request->input('url'), PHP_URL_HOST);
+abort_unless(in_array($host, config('services.preview.allowed_hosts'), true), 422);
+
+$ip = gethostbyname($host);
+abort_if(filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false, 422);
+
+Http::withOptions(['allow_redirects' => false, 'timeout' => 5])->get($request->input('url'));
+```
+
+Three things the naive version misses. A **scheme check** (`file://`, `gopher://` are not http). **Redirects** — an allowlisted host can 302 you to `169.254.169.254`, which is why `allow_redirects` goes off rather than being trusted. And the **DNS rebinding window**: the resolve you validated is not necessarily the resolve the HTTP client performs. A blocklist of `localhost` and `127.0.0.1` catches none of this — `0.0.0.0`, `[::1]`, `2130706433`, and a hostname you control resolving to a private A record all get through. Allowlist, or route the fetch through an egress proxy.
+
+Webhook URLs, avatar-by-URL, PDF/HTML renderers, and "import from link" are where this lives.
+
+## Secrets in responses — HIGH
+
+```php
+// BAD — every column, forever, including the ones added next sprint
+return response()->json(User::with('orders')->find($id));
+
+// GOOD — a Resource names the fields, and the model hides the rest
+final class UserResource extends JsonResource {
+    public function toArray($request): array {
+        return ['id' => $this->id, 'name' => $this->name];
+    }
+}
+
+// app/Models/User.php — the backstop for the paths that skip the Resource
+protected $hidden = ['password', 'remember_token', 'two_factor_secret', 'api_token'];
+```
+
+`$hidden` is a safety net, not the control: it only applies to serialization, and a `toArray()` in a job or an export walks straight past your intent. The finding is a model or collection returned directly from a controller — grep for `return response()->json($model` and `return $model`. Watch `with()` too: an eager-loaded relation serializes wholesale, so a clean `UserResource` still leaks if it wraps `$this->orders` without a nested Resource.
+
+## CORS — MED
+
+`config/cors.php` with `'allowed_origins' => ['*']` and `'supports_credentials' => true` is a real finding — the combination is rejected by browsers, so it usually means someone then reflected the origin instead, which is worse. List the origins. And remember CORS is a browser policy, not authorization: it stops a page from reading the response, never a script or a server from making the request.
 
 ## Rate limiting — MED
 
