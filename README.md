@@ -27,9 +27,9 @@ Domain-agnostic, spec-driven skills that take a task from idea → plan → buil
 
 | Skill | Description |
 |-------|-------------|
-| `workflow` | Orchestrator for one unit of work — drives `spec → plan → build → verify → done`. Delegates spec-writing to `creator-spec` and plan-writing to `creator-plan`. Dispatched via `/workflow <slug> <prompt>` |
-| `creator-spec` | Writes the contract (`docs/spec/<slug>.md`) — Problem/Why, Scope, Requirements, Acceptance Criteria. Mandatory for new features, opt-in for fix/improve |
-| `creator-plan` | Writes the implementation plan (`docs/plan/<slug>.md`) — Context, Goals, Notes, Done-when, Implementation. Derives from the spec when one exists |
+| `workflow` | **Deprecated.** Use the AI Hero flow (`mattpocock-skills`): `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement` → `/code-review`, then a human smoke test |
+| `creator-spec` | **Deprecated.** Use `/grill-with-docs` + `/to-spec` |
+| `creator-plan` | **Deprecated.** Use `/to-tickets`, or `/implement` for single-session work |
 
 ### Knowledge & Visualization
 
@@ -79,9 +79,6 @@ npx skills add tobidsn/skills@ant-dedoc-scramble
 npx skills add tobidsn/skills@ant-important-code
 npx skills add tobidsn/skills@autoresearch
 npx skills add tobidsn/skills@mindmap-architect
-npx skills add tobidsn/skills@workflow
-npx skills add tobidsn/skills@creator-spec
-npx skills add tobidsn/skills@creator-plan
 npx skills add tobidsn/skills@project-issue
 npx skills add tobidsn/skills@call-graph
 npx skills add tobidsn/skills@promo-card
